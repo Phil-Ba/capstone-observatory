@@ -12,23 +12,31 @@ object Extraction {
 
 	case class Station(stn: Option[Int], wban: Option[Int], latitude: Option[Double], longitude: Option[Double])
 
-	val stationStruct = StructType(Seq(
-		StructField("stn", DataTypes.IntegerType, true),
-		StructField("wban", DataTypes.IntegerType, true),
-		StructField("latitude", DataTypes.DoubleType, true),
-		StructField("longitude", DataTypes.DoubleType, true)
-	))
+	val stationStruct = StructType( Seq(
+		StructField( "stn", DataTypes.IntegerType, true ),
+		StructField( "wban", DataTypes.IntegerType, true ),
+		StructField( "latitude", DataTypes.DoubleType, true ),
+		StructField( "longitude", DataTypes.DoubleType, true )
+	) )
 
-	case class Temperature(stn: Option[Int], wban: Option[Int], month: Option[Int], day: Option[Int], tempF:
-	Option[Double])
+	case class Temperature(stn: Option[Int], wban: Option[Int], month: Int, day: Int, tempF: Double)
+
+	val tempStruct = StructType( Seq(
+		StructField( "stn", DataTypes.IntegerType, true ),
+		StructField( "wban", DataTypes.IntegerType, true ),
+		StructField( "month", DataTypes.IntegerType, false ),
+		StructField( "day", DataTypes.IntegerType, false ),
+		StructField( "tempF", DataTypes.DoubleType, false )
+	) )
+
 
 	val missingTemp = 9999.9
 
-	val spark: SparkSession =
+	private val spark: SparkSession =
 		SparkSession
 			.builder()
-			.appName("Time Usage")
-			.config("spark.master", "local[4]")
+			.appName( "Time Usage" )
+			.config( "spark.master", "local[4]" )
 			.getOrCreate()
 
 	import spark.implicits._
@@ -41,14 +49,40 @@ object Extraction {
 		*/
 	def locateTemperatures(year: Int, stationsFile: String,
 												 temperaturesFile: String): Iterable[(LocalDate, Location, Double)] = {
-		val stationFileLoc = Extraction.getClass.getResource(stationsFile).toExternalForm
-		val stationDf = spark.read
-			.option("header", false)
-			.schema(stationStruct)
-			.csv(stationFileLoc).as[Station]
-			.filter((station: Station) => station.latitude.isDefined && station.longitude.isDefined)
-			.show()
-		null
+		val stations = readStationsData( stationsFile )
+		val tempratures = readStationsData( temperaturesFile )
+
+		stations
+			.join( tempratures, stations( "stn" ) === tempratures( "stn" ) && stations( "wban" ) === tempratures( "wban" ) )
+			.map( r => {
+				val day = r.getAs[Int]( "day" )
+				val month = r.getAs[Int]( "month" )
+				val date = LocalDate.of( year, month, day )
+				val tempC = convertFarenheitToCelsius( r.getAs( "tempF" ) )
+				val location = Location( r.getAs( "latitude" ), r.getAs( "longitude" ) )
+				(date, location, tempC)
+			} )
+			.collect()
+	}
+
+	protected[observatory] def readStationsData(stationsFile: String) = {
+		val stationFileLoc = Extraction.getClass.getResource( stationsFile ).toExternalForm
+		spark.read
+			.option( "header", false )
+			.schema( stationStruct )
+			.csv( stationFileLoc ).as[Station]
+			.filter( (station: Station) => station.latitude.isDefined && station.longitude.isDefined )
+	}
+
+	protected[observatory] def convertFarenheitToCelsius(f: Double) = (f - 32) * 5 / 9
+
+	protected[observatory] def readTempratureData(temperaturesFile: String) = {
+		val temperaturesFileLoc = Extraction.getClass.getResource( temperaturesFile ).toExternalForm
+		spark.read
+			.option( "header", false )
+			.schema( tempStruct )
+			.csv( temperaturesFileLoc ).as[Temperature]
+			.filter( (temp: Temperature) ⇒ temp.tempF != missingTemp )
 	}
 
 	/**
