@@ -1,5 +1,7 @@
 package observatory
 
+import java.time.LocalDate
+
 import observatory.Extraction.{Station, Temperature}
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
@@ -8,6 +10,13 @@ import org.scalatest.{FunSuite, Matchers}
 
 @RunWith(classOf[JUnitRunner])
 class ExtractionTest extends FunSuite with Matchers with TableDrivenPropertyChecks {
+
+	test("locateTemperatures") {
+		val result = Extraction.locateTemperatures(1975, "/stations.csv", "/1975test.csv")
+
+		val expected = (LocalDate.of(1975, 1, 2), Location(70.933, -8.667),-7.388888888888889)
+		result should contain(expected)
+	}
 
 	test("stations test") {
 		val stationsData = Extraction.readStationsData("/stations.csv")
@@ -32,7 +41,7 @@ class ExtractionTest extends FunSuite with Matchers with TableDrivenPropertyChec
 	}
 
 	test("temperature test") {
-		val temperatureData = Extraction.readTempratureData("/2015.csv")
+		val temperatureData = Extraction.readTemperatureData("/2015.csv")
 			.collect()
 		temperatureData.exists(_.stn == 7005) shouldBe false
 		val temp = Temperature(Some(13730), None, 12, 24, 34.0)
