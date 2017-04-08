@@ -2,13 +2,24 @@ package observatory
 
 import java.time.LocalDate
 
+import org.apache.spark.sql._
+import org.apache.spark.sql.functions.avg
 import org.apache.spark.sql.types.{DataTypes, StructField, StructType}
-import org.apache.spark.sql.{Encoder, Encoders, SparkSession}
+
+import scala.reflect.ClassTag
 
 /**
 	* 1st milestone: data extraction
 	*/
 object Extraction {
+
+	implicit def kryoEncoder[A](implicit ct: ClassTag[A]) =
+		org.apache.spark.sql.Encoders.kryo[A](ct)
+
+	implicit def tuple3[A1, A2, A3](implicit e1: Encoder[A1],
+																	e2: Encoder[A2],
+																	e3: Encoder[A3]
+																 ): Encoder[(A1, A2, A3)] = Encoders.tuple[A1, A2, A3](e1, e2, e3)
 
 	case class Station(stn: Option[Int], wban: Option[Int], latitude: Option[Double], longitude: Option[Double])
 
@@ -18,7 +29,6 @@ object Extraction {
 		StructField("latitude", DataTypes.DoubleType, true),
 		StructField("longitude", DataTypes.DoubleType, true)
 	))
-
 
 	case class Temperature(stn: Option[Int], wban: Option[Int], month: Int, day: Int, tempF: Double)
 
@@ -51,18 +61,15 @@ object Extraction {
 		*/
 	def locateTemperatures(year: Int, stationsFile: String,
 												 temperaturesFile: String): Iterable[(LocalDate, Location, Double)] = {
+		readAndJoinData(year, stationsFile, temperaturesFile).collect()
+
+	}
+
+
+	protected def readAndJoinData(year: Int, stationsFile: String,
+																temperaturesFile: String): Dataset[(LocalDate, Location, Double)] = {
 		val stations = readStationsData(stationsFile)
 		val temperatures = readTemperatureData(temperaturesFile)
-
-		import scala.reflect.ClassTag
-		implicit def kryoEncoder[A](implicit ct: ClassTag[A]) =
-			org.apache.spark.sql.Encoders.kryo[A](ct)
-
-		implicit def tuple3[A1, A2, A3](
-																		 implicit e1: Encoder[A1],
-																		 e2: Encoder[A2],
-																		 e3: Encoder[A3]
-																	 ): Encoder[(A1, A2, A3)] = Encoders.tuple[A1, A2, A3](e1, e2, e3)
 
 		stations
 			.join(temperatures, stations("stn").eqNullSafe(temperatures("stn")) &&
@@ -75,7 +82,6 @@ object Extraction {
 				val location = Location(r.getAs("latitude"), r.getAs("longitude"))
 				(date, location, tempC)
 			})
-			.collect()
 	}
 
 
@@ -106,7 +112,13 @@ object Extraction {
 		* @return A sequence containing, for each location, the average temperature over the year.
 		*/
 	def locationYearlyAverageRecords(records: Iterable[(LocalDate, Location, Double)]): Iterable[(Location, Double)] = {
-		???
+		spark.sparkContext
+			.parallelize(records.toSeq)
+			.toDF("date", "location", "temperature")
+			.groupBy($"location")
+			.agg($"location", avg($"temperature").as("temperature"))
+			.select($"location".as[Location], $"temperature".as[Double])
+			.collect()
 	}
 
 }
