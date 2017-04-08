@@ -12,14 +12,14 @@ import org.scalatest.{FunSuite, Matchers}
 class ExtractionTest extends FunSuite with Matchers with TableDrivenPropertyChecks {
 
 	test("locateTemperatures") {
-		val result = Extraction.locateTemperatures(1975, "/stations.csv", "/1975test.csv")
+		val result = Extraction.locateTemperatures(1975, "/stationsTest.csv", "/1975test.csv")
 
 		val expected = (LocalDate.of(1975, 1, 2), Location(70.933, -8.667),-7.388888888888889)
 		result should contain(expected)
 	}
 
 	test("stations test") {
-		val stationsData = Extraction.readStationsData("/stations.csv")
+		val stationsData = Extraction.readStationsData("/stationsTest.csv")
 			.collect()
 		stationsData.exists(_.stn == 7005) shouldBe false
 
