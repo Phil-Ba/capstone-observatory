@@ -19,6 +19,7 @@ object Extraction {
 		StructField("longitude", DataTypes.DoubleType, true)
 	))
 
+
 	case class Temperature(stn: Option[Int], wban: Option[Int], month: Int, day: Int, tempF: Double)
 
 	val tempStruct = StructType(Seq(
@@ -53,15 +54,10 @@ object Extraction {
 		val stations = readStationsData(stationsFile)
 		val temperatures = readTemperatureData(temperaturesFile)
 
-		//		implicit val myObjEncoder = org.apache.spark.sql.Encoders.kryo[LocalDate]
 		import scala.reflect.ClassTag
 		implicit def kryoEncoder[A](implicit ct: ClassTag[A]) =
 			org.apache.spark.sql.Encoders.kryo[A](ct)
 
-		stations.show()
-		temperatures.show()
-
-		//
 		implicit def tuple3[A1, A2, A3](
 																		 implicit e1: Encoder[A1],
 																		 e2: Encoder[A2],
@@ -69,22 +65,17 @@ object Extraction {
 																	 ): Encoder[(A1, A2, A3)] = Encoders.tuple[A1, A2, A3](e1, e2, e3)
 
 		stations
-//			.join(temperatures, stations("stn") === temperatures("stn") && stations("wban") ===
-//				temperatures("wban"))
-			//			.join(temperatures, Seq("stn", "wban"))
-			//			.join(temperatures, Seq("stn"))
-						.join(temperatures, Seq("wban"))
-			.show()
-		//			.map(r => {
-		//			val day = r.getAs[Int]("day")
-		//			val month = r.getAs[Int]("month")
-		//			val date = LocalDate.of(year, month, day)
-		//			val tempC = convertFarenheitToCelsius(r.getAs("tempF"))
-		//			val location = Location(r.getAs("latitude"), r.getAs("longitude"))
-		//			(date, location, tempC)
-		//		})
-		//			.collect()
-		null
+			.join(temperatures, stations("stn").eqNullSafe(temperatures("stn")) &&
+				stations("wban").eqNullSafe(temperatures("wban")))
+			.map(r => {
+				val day = r.getAs[Int]("day")
+				val month = r.getAs[Int]("month")
+				val date = LocalDate.of(year, month, day)
+				val tempC = convertFarenheitToCelsius(r.getAs("tempF"))
+				val location = Location(r.getAs("latitude"), r.getAs("longitude"))
+				(date, location, tempC)
+			})
+			.collect()
 	}
 
 
