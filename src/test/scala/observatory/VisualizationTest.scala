@@ -20,4 +20,15 @@ class VisualizationTest extends FunSuite with Checkers {
 		println(result)
 	}
 
+	test("predictTemperature real dataset") {
+		val records = Extraction
+			.locationYearlyAverageRecords(Extraction.locateTemperatures(1975, "/stations.csv", "/1975.csv"))
+
+		val t1 = System.nanoTime
+		val result = Visualization.predictTemperature(records, Location(2, 3))
+		val duration = (System.nanoTime - t1) / 1e9d
+		println(duration)
+		println(result)
+	}
+
 }
