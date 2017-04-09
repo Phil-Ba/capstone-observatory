@@ -37,7 +37,7 @@ object Visualization {
 		temperatures.find(temp => temp._1 == location)
 			.map(_._2)
 			.getOrElse({
-				val result: (Double, Double) = approxTemperatureSparkRDD(temperatures, location)
+				val result: (Double, Double) = approxTemperatureVanilla(temperatures, location)
 				result._1 / result._2
 			})
 	}
@@ -97,6 +97,27 @@ object Visualization {
 			.aggregateByKey(0.0D)((sum: Double, values: Iterable[Double]) => sum + values.sum, (d1, d2) => d1 + d2)
 			.collectAsMap()
 		(result(1), result(2))
+	}
+
+	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], location: Location) = {
+		val result = temperatures.toSeq
+			.flatMap((locAndTemp: (Location, Double)) => {
+				val locationDatapoint = locAndTemp._1
+				val temp = locAndTemp._2
+				val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
+				val invWeight = 1 / pow(distance, p)
+				Seq((1, temp * invWeight), (2, invWeight))
+			})
+			.groupBy(_._1)
+
+		val v1 = result(1).aggregate(0.0D)(
+			(sum: Double, values) => sum + values._2,
+			(d1, d2) => d1 + d2)
+		val v2 = result(2).aggregate(0.0D)(
+			(sum: Double, values) => sum + values._2,
+			(d1, d2) => d1 + d2)
+
+		(v1, v2)
 	}
 
 	protected[observatory] def approximateDistance(lat: Double, lon: Double, location2: Location): Double = {
