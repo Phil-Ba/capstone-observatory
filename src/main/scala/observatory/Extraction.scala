@@ -43,13 +43,7 @@ object Extraction {
 
 	val missingTemp = 9999.9
 
-	private val spark: SparkSession =
-		SparkSession
-			.builder()
-			.appName("Time Usage")
-			.config("spark.master", "local[4]")
-			.getOrCreate()
-
+	import Main.spark
 	import spark.implicits._
 
 
