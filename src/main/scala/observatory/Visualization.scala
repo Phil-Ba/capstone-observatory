@@ -5,6 +5,7 @@ import java.lang.Math.pow
 import com.sksamuel.scrimage.Image
 import org.apache.spark.sql.functions.sum
 import org.apache.spark.sql.{Row, SparkSession}
+import org.slf4j.LoggerFactory
 
 import scala.math._
 
@@ -12,6 +13,8 @@ import scala.math._
 	* 2nd milestone: basic visualization
 	*/
 object Visualization {
+
+  private val logger = LoggerFactory.getLogger(Visualization.getClass)
 
 	val R = 6372.8 //radius in km
 	val p = 2
@@ -34,12 +37,17 @@ object Visualization {
 		* @return The predicted temperature at `location`
 		*/
 	def predictTemperature(temperatures: Iterable[(Location, Double)], location: Location): Double = {
-		temperatures.find(temp => temp._1 == location)
+    logger.info("Input size: {}", temperatures.seq.size)
+    val t1 = System.nanoTime
+    val result = temperatures.find(temp => temp._1 == location)
 			.map(_._2)
 			.getOrElse({
-				val result: (Double, Double) = approxTemperatureVanilla(temperatures, location)
+        val result: (Double, Double) = approxTemperatureSparkRDDNoGroup(temperatures, location)
 				result._1 / result._2
 			})
+    val duration = (System.nanoTime - t1) / 1e9d
+    logger.info("predictTemperature took {} seconds!", duration)
+    result
 	}
 
 	private def approxTemperatureSpark(temperatures: Iterable[(Location, Double)], location: Location) = {
@@ -56,6 +64,7 @@ object Visualization {
 			})
 			.select(sum($"_1").as[Double], sum($"_2").as[Double])
 			.first()
+
 		result
 	}
 
@@ -98,6 +107,24 @@ object Visualization {
 			.collectAsMap()
 		(result(1), result(2))
 	}
+
+  private def approxTemperatureSparkRDDNoGroup(temperatures: Iterable[(Location, Double)], location: Location) = {
+    val result = spark.sparkContext
+      .parallelize(temperatures.toSeq)
+      .map((locAndTemp: (Location, Double)) => {
+        val locationDatapoint = locAndTemp._1
+        val temp = locAndTemp._2
+        val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
+        val invWeight = 1 / pow(distance, p)
+        (temp * invWeight, invWeight)
+      })
+      .cache()
+
+    val result1 = result.aggregate(0.0)(_ + _._1, _ + _)
+    val result2 = result.aggregate(0.0)(_ + _._2, _ + _)
+    result.unpersist()
+    (result1, result2)
+  }
 
 	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], location: Location) = {
 		val result = temperatures.toSeq

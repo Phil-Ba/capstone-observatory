@@ -1,14 +1,13 @@
-import sbt._
-import Keys._
-import Settings._
+import java.io.{File, FileInputStream, IOException}
 
-import java.io.{File, IOException, FileInputStream}
+import _root_.Settings._
 import org.apache.commons.codec.binary.Base64
+import sbt.Keys._
+import sbt.{file, _}
 
 import scala.util.parsing.json.JSON
+import scala.util.{Failure, Success, Try}
 import scalaj.http._
-
-import scala.util.{Try, Success, Failure}
 
 case class MapMapString(val map: Map[String, Map[String, String]])
 /**
@@ -40,7 +39,7 @@ class StudentBuildLike protected() extends CommonBuild {
 			val withoutCommonSources = allFiles.filter(f => !commonSourcePaths.exists(f.getPath.startsWith))
 			withoutCommonSources pair (relativeTo(sdirs) | relativeTo(base) | flat)
 		}
-
+	//	(file("sr/main/resources/log4j.xml"),"")	::
 	val packageSubmissionFiles = {
 		// in the packageSubmission task we only use the sources of the assignment and not the common sources. We also do
 		// not package resources.
