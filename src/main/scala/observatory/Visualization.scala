@@ -35,7 +35,7 @@ object Visualization {
 		val result = temperatures.find(temp => temp._1 == location)
 			.map(_._2)
 			.getOrElse({
-				val result: (Double, Double) = approxTemperatureSparkRDDNoGroup(temperatures, location)
+				val result: (Double, Double) = approxTemperatureVanilla(temperatures, location)
 				result._1 / result._2
 			})
 		val duration = (System.nanoTime - t1) / 1e9d
