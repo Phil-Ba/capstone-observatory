@@ -35,7 +35,7 @@ class InterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
 
 	private[util] def interpolate(p0: RgbPoint, p1: RgbPoint, x: Double) = {
 		val interpolated = p0._2 + (x - p0._1) * (p1._2 - p0._2) / (p1._1 - p0._1)
-		interpolated.toInt
+		math.round(interpolated).toInt
 	}
 
 }

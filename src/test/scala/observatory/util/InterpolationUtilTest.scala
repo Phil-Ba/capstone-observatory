@@ -14,9 +14,9 @@ class InterpolationUtilTest extends FunSuite with TableDrivenPropertyChecks with
 			("p0", "p1", "x", "expected"),
 			((1D, 1), (4D, 4), 3D, 3D),
 			((1D, 1), (4D, 4), 8D, 8D),
-			((1D, 5), (5D, 50), 3D, 27),
+			((1D, 5), (5D, 50), 3D, 28),
 			((1D, 3), (4D, 12), 3D, 9D),
-			((1D, 3), (4D, 12), 0.5D, 1D)
+			((1D, 3), (4D, 12), 0.5D, 2D)
 		)
 
 		forEvery(testData) { (p0, p1, x, expected) => {
