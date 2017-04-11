@@ -2,12 +2,13 @@ package observatory
 
 import java.lang.Math.pow
 
-import com.sksamuel.scrimage.Image
+import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
 import observatory.util.InterpolationUtil
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions.sum
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.math._
 
 /**
@@ -31,7 +32,7 @@ object Visualization {
 		* @return The predicted temperature at `location`
 		*/
 	def predictTemperature(temperatures: Iterable[(Location, Double)], location: Location): Double = {
-		logger.info("Input size: {}", temperatures.seq.size)
+		logger.debug("Input size: {}", temperatures.seq.size)
 		val t1 = System.nanoTime
 		val result = temperatures.find(temp => temp._1 == location)
 			.map(_._2)
@@ -40,7 +41,7 @@ object Visualization {
 				result._1 / result._2
 			})
 		val duration = (System.nanoTime - t1) / 1e9d
-		logger.info("predictTemperature took {} seconds!", duration)
+		logger.debug("predictTemperature took {} seconds!", duration)
 		result
 	}
 
@@ -165,7 +166,20 @@ object Visualization {
 		* @return A 360×180 image where each pixel shows the predicted temperature at its location
 		*/
 	def visualize(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)]): Image = {
-		???
+		if (logger.isDebugEnabled()) {
+			colors.foreach(c => logger.debug("t{}:c{}", c._1, c._2))
+		}
+		val img = Image(360, 180)
+		val cache = mutable.HashMap[Double, Color]()
+		img.map((x: Int, y: Int, pixel: Pixel) => {
+			val temperature = predictTemperature(temperatures, pixelToGps(x, y))
+			val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
+			Pixel(RGBColor(color.red, color.green, color.blue))
+		})
+	}
+
+	private def pixelToGps(x: Int, y: Int) = {
+		Location(90 - y, x - 180)
 	}
 
 }

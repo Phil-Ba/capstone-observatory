@@ -31,4 +31,27 @@ class VisualizationTest extends FunSuite with Checkers {
 		println(result)
 	}
 
+	test("visualize real dataset") {
+		val records = Extraction
+			.locationYearlyAverageRecords(Extraction.locateTemperatures(1975, "/stations.csv", "/1975.csv"))
+
+		val t1 = System.nanoTime
+		val result = Visualization.visualize(records, grads)
+		val duration = (System.nanoTime - t1) / 1e9d
+		result.output("vizualImg.png")
+		println(duration)
+		println(result)
+	}
+
+	val grads = Seq(
+		(60D, Color(255, 255, 255)),
+		(32D, Color(255, 0, 0)),
+		(12D, Color(255, 255, 0)),
+		(0D, Color(0, 255, 255)),
+		(-15D, Color(0, 0, 255)),
+		(-27D, Color(255, 0, 255)),
+		(-50D, Color(33, 0, 107)),
+		(-60D, Color(0, 0, 0))
+	)
+
 }
