@@ -35,7 +35,12 @@ class InterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
 
 	private[util] def interpolate(p0: RgbPoint, p1: RgbPoint, x: Double) = {
 		val interpolated = p0._2 + (x - p0._1) * (p1._2 - p0._2) / (p1._1 - p0._1)
-		math.round(interpolated).toInt
+		val int = math.round(interpolated).toInt
+		int match {
+			case tooBig if tooBig > 255 => 255
+			case tooSmall if tooSmall < 0 => 0
+			case default => default
+		}
 	}
 
 }
