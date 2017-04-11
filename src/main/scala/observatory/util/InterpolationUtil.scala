@@ -10,7 +10,7 @@ class InterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
 
 	val datapoints = datapointsInput.sortBy(_._1)
 
-	def interpolate(x: Double): Unit = {
+	def interpolate(x: Double): Color = {
 		val startingPoints = findStartingPoints(x)
 		val lower = startingPoints._1
 		val upper = startingPoints._2

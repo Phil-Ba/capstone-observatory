@@ -3,6 +3,7 @@ package observatory
 import java.lang.Math.pow
 
 import com.sksamuel.scrimage.Image
+import observatory.util.InterpolationUtil
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions.sum
 import org.slf4j.LoggerFactory
@@ -155,8 +156,7 @@ object Visualization {
 		* @return The color that corresponds to `value`, according to the color scale defined by `points`
 		*/
 	def interpolateColor(points: Iterable[(Double, Color)], value: Double): Color = {
-
-		???
+		new InterpolationUtil(points.toSeq).interpolate(value)
 	}
 
 	/**
