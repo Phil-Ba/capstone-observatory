@@ -20,7 +20,7 @@ object Main {
 		Logger.getRootLogger.addAppender(console)
 		Logger.getRootLogger.setLevel(Level.INFO)
 		Logger.getRootLogger.setAdditivity(true)
-		Logger.getRootLogger.getLoggerRepository.getLogger("observatory").setLevel(Level.DEBUG)
+		Logger.getRootLogger.getLoggerRepository.getLogger("observatory").setLevel(Level.INFO)
 		Logger.getRootLogger.getLoggerRepository.getLogger("org.apache.spark").setLevel(Level.WARN)
 		Logger.getRootLogger.getLoggerRepository.getLogger("org.spark_project").setLevel(Level.WARN)
 	}
