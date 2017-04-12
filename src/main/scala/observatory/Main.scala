@@ -12,7 +12,7 @@ object Main {
 		val console = new ConsoleAppender
 		//create appender
 		//configure the appender
-		val PATTERN = "[%C{1}] %m%n"
+		val PATTERN = "[%p][%C{1}] %m%n"
 		console.setLayout(new PatternLayout(PATTERN))
 		console.setThreshold(Level.ALL)
 		console.activateOptions()
@@ -29,6 +29,6 @@ object Main {
 		SparkSession
 			.builder()
 			.appName("Time Usage")
-			.config("spark.master", "local")
+			.config("spark.master", "local[4]")
 			.getOrCreate()
 }
