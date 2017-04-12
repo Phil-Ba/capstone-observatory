@@ -13,6 +13,8 @@ import scala.reflect.ClassTag
 	*/
 object Extraction {
 
+	Main.loggerConfig
+
 	implicit def kryoEncoder[A](implicit ct: ClassTag[A]) =
 		org.apache.spark.sql.Encoders.kryo[A](ct)
 
