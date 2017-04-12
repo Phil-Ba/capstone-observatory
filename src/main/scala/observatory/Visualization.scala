@@ -3,10 +3,11 @@ package observatory
 import java.lang.Math.pow
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
-import observatory.util.InterpolationUtil
+import observatory.util.{InterpolationUtil, Profiler}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions.sum
 import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
 
 import scala.collection.mutable
 import scala.math._
@@ -17,7 +18,7 @@ import scala.math._
 object Visualization {
 
 	val R = 6372.8 //radius in km
-	val p = 2
+	val p = 6
 
 	Main.loggerConfig
 
@@ -33,16 +34,15 @@ object Visualization {
 		*/
 	def predictTemperature(temperatures: Iterable[(Location, Double)], location: Location): Double = {
 		logger.debug("Input size: {}", temperatures.seq.size)
-		val t1 = System.nanoTime
-		val result = temperatures.find(temp => temp._1 == location)
-			.map(_._2)
-			.getOrElse({
-				val result: (Double, Double) = approxTemperatureVanilla(temperatures, location)
-				result._1 / result._2
-			})
-		val duration = (System.nanoTime - t1) / 1e9d
-		logger.debug("predictTemperature took {} seconds!", duration)
-		result
+		Profiler.runProfiled("predictTemperature", Level.DEBUG) {
+			val result = temperatures.find(temp => temp._1 == location)
+				.map(_._2)
+				.getOrElse({
+					val result: (Double, Double) = approxTemperatureVanilla(temperatures, location)
+					result._1 / result._2
+				})
+			result
+		}
 	}
 
 	private def approxTemperatureSpark(temperatures: Iterable[(Location, Double)], location: Location) = {
@@ -170,12 +170,57 @@ object Visualization {
 			colors.foreach(c => logger.debug("t{}:c{}", c._1, c._2))
 		}
 		val img = Image(360, 180)
-		val cache = mutable.HashMap[Double, Color]()
-		img.map((x: Int, y: Int, pixel: Pixel) => {
-			val temperature = predictTemperature(temperatures, pixelToGps(x, y))
-			val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
-			Pixel(RGBColor(color.red, color.green, color.blue))
-		})
+		val xyValues = for {
+			x <- 0 until 360
+			y <- 0 until 180
+		} yield {
+			(x, y)
+		}
+
+		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesVanilla(temperatures, colors, xyValues)
+
+		Profiler.runProfiled("imgCreation") {
+			xyColors.foreach(
+				xyColor => {
+					val xy = xyColor._1
+					val color = xyColor._2
+					img.setPixel(xy._1, xy._2, Pixel(RGBColor(color.red, color.green, color.blue)))
+				}
+			)
+			img
+		}
+
+	}
+
+	private def computeImgValuesRDD(temperatures: Iterable[(Location, Double)],
+																	colors: Iterable[(Double, Color)],
+																	xyValues: Seq[(Int, Int)]): Seq[((Int, Int), Color)] = {
+		Profiler.runProfiled("computeImgValuesRDD") {
+			val cache = mutable.HashMap[Double, Color]()
+			val xyColors = spark.sparkContext
+				.parallelize(xyValues)
+				.map(xy => {
+					val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2))
+					val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
+					(xy, color)
+				})
+				.collect()
+			xyColors
+		}
+	}
+
+	private def computeImgValuesVanilla(temperatures: Iterable[(Location, Double)],
+																			colors: Iterable[(Double, Color)],
+																			xyValues: Seq[(Int, Int)]): Seq[((Int, Int), Color)] = {
+		Profiler.runProfiled("computeImgValuesVanilla") {
+			val cache = mutable.HashMap[Double, Color]()
+			xyValues.par.map(xy => {
+				val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2))
+				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
+				(xy, color)
+			})
+				.seq
+		}
 	}
 
 	private def pixelToGps(x: Int, y: Int) = {
