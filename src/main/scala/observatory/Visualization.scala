@@ -19,7 +19,7 @@ object Visualization {
 
 	val R = 6372.8 //radius in km
 	val p = 6
-	val scale: Int = 2
+	val scale: Int = 1
 	val baseWidth: Int = 360
 	val baseHeight: Int = 180
 
@@ -31,7 +31,7 @@ object Visualization {
 	private val logger = LoggerFactory.getLogger(Visualization.getClass)
 
 	/**
-		* @param temperatures Known temperatures: pairs containing a location and the temperature at this location
+		* @param temperatures Known temperaturechs: pairs containing a location and the temperature at this location
 		* @param location     Location where to predict the temperature
 		* @return The predicted temperature at `location`
 		*/
@@ -170,7 +170,6 @@ object Visualization {
 		* @return A 360×180 image where each pixel shows the predicted temperature at its location
 		*/
 	def visualize(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)]): Image = {
-		val img = Image(baseWidth, baseHeight)
 		val xyValues = for {
 			x <- 0 until baseWidth * scale
 			y <- 0 until baseHeight * scale
@@ -179,6 +178,7 @@ object Visualization {
 		}
 
 		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesRDD(temperatures, colors, xyValues)
+		val img = Image(baseWidth * scale, baseHeight * scale)
 
 		Profiler.runProfiled("imgCreation") {
 			xyColors.foreach(
@@ -224,7 +224,7 @@ object Visualization {
 	}
 
 	private[observatory] def pixelToGps(x: Int, y: Int) = {
-		Location(x - (baseWidth * scale) / 2, (baseHeight * scale) / 2 - y)
+		Location((baseHeight * scale) / 2 - y, x - (baseWidth * scale) / 2)
 	}
 
 }

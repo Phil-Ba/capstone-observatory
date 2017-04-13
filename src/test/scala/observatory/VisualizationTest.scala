@@ -45,12 +45,12 @@ class VisualizationTest extends FunSuite with Matchers with TableDrivenPropertyC
 
 
 		val records = Extraction
-			.locationYearlyAverageRecords(Extraction.locateTemperatures(1975, "/stations.csv", "/1975.csv"))
+			.locationYearlyAverageRecords(Extraction.locateTemperatures(2015, "/stations.csv", "/2015.csv"))
 
 		val t1 = System.nanoTime
 		val result = Visualization.visualize(records, grads)
 		val duration = (System.nanoTime - t1) / 1e9d
-		result.output("vizualImg.png")
+		result.output("vizualImg2015.png")
 		println(duration)
 		println(result)
 
@@ -63,15 +63,15 @@ class VisualizationTest extends FunSuite with Matchers with TableDrivenPropertyC
 		val testData = Table(
 			("x", "y", "expectedLocation"),
 			//img top left
-			(0, 0, Location(-baseWidth / 2, baseHeight / 2)),
+			(0, 0, Location(baseHeight / 2, -baseWidth / 2)),
 			//top right
-			(baseWidth, 0, Location(baseWidth / 2, baseHeight / 2)),
+			(baseWidth, 0, Location(baseHeight / 2, baseWidth / 2)),
 			//img center
 			(baseWidth / 2, baseHeight / 2, Location(0, 0)),
 			//img bottom left
-			(0, baseHeight, Location(-baseWidth / 2, -baseHeight / 2)),
+			(0, baseHeight, Location(-baseHeight / 2, -baseWidth / 2)),
 			//img right bottom
-			(baseWidth, baseHeight, Location(baseWidth / 2, -baseHeight / 2))
+			(baseWidth, baseHeight, Location(-baseHeight / 2, baseWidth / 2))
 		)
 
 		forEvery(testData) { (x, y, expectedLocation) =>
