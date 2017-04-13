@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
 import scala.collection.mutable
+import scala.collection.parallel.ForkJoinTaskSupport
 import scala.math._
 
 /**
@@ -19,7 +20,6 @@ object Visualization {
 
 	val R = 6372.8 //radius in km
 	val p = 6
-	val scale: Int = 1
 	val baseWidth: Int = 360
 	val baseHeight: Int = 180
 
@@ -125,8 +125,9 @@ object Visualization {
 	}
 
 	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], location: Location) = {
-		val result = temperatures
-			.par
+		val temperaturesPar = temperatures.par
+		temperaturesPar.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
+		val result = temperaturesPar
 			.flatMap((locAndTemp: (Location, Double)) => {
 				val locationDatapoint = locAndTemp._1
 				val temp = locAndTemp._2
@@ -169,7 +170,8 @@ object Visualization {
 		* @param colors       Color scale
 		* @return A 360×180 image where each pixel shows the predicted temperature at its location
 		*/
-	def visualize(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)]): Image = {
+	def visualize(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)],
+								scale: Int = 1): Image = {
 		val xyValues = for {
 			x <- 0 until baseWidth * scale
 			y <- 0 until baseHeight * scale
@@ -177,7 +179,7 @@ object Visualization {
 			(x, y)
 		}
 
-		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesRDD(temperatures, colors, xyValues)
+		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesRDD(temperatures, colors, xyValues, scale)
 		val img = Image(baseWidth * scale, baseHeight * scale)
 
 		Profiler.runProfiled("imgCreation") {
@@ -194,13 +196,14 @@ object Visualization {
 
 	private def computeImgValuesRDD(temperatures: Iterable[(Location, Double)],
 																	colors: Iterable[(Double, Color)],
-																	xyValues: Seq[(Int, Int)]): Seq[((Int, Int), Color)] = {
+																	xyValues: Seq[(Int, Int)],
+																	scale: Int = 1): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValuesRDD") {
 			val cache = mutable.HashMap[Double, Color]()
 			val xyColors = spark.sparkContext
 				.parallelize(xyValues)
 				.map(xy => {
-					val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2))
+					val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2, scale))
 					val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 					(xy, color)
 				})
@@ -214,7 +217,9 @@ object Visualization {
 																			xyValues: Seq[(Int, Int)]): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValuesVanilla") {
 			val cache = mutable.HashMap[Double, Color]()
-			val xyColors = xyValues.par.map(xy => {
+			val xyPar = xyValues.par
+			xyPar.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
+			val xyColors = xyPar.map(xy => {
 				val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2))
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(xy, color)
@@ -223,8 +228,8 @@ object Visualization {
 		}
 	}
 
-	private[observatory] def pixelToGps(x: Int, y: Int) = {
-		Location((baseHeight * scale) / 2 - y, x - (baseWidth * scale) / 2)
+	private[observatory] def pixelToGps(x: Int, y: Int, scale: Int = 1) = {
+		Location(baseHeight / 2 - (y / 2), (x / 2) - baseWidth / 2)
 	}
 
 }
