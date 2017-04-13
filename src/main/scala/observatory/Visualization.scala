@@ -22,6 +22,7 @@ object Visualization {
 	val p = 6
 	val baseWidth: Int = 360
 	val baseHeight: Int = 180
+	private val fjPool = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
 
 	Main.loggerConfig
 
@@ -126,7 +127,7 @@ object Visualization {
 
 	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], location: Location) = {
 		val temperaturesPar = temperatures.par
-		temperaturesPar.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
+		temperaturesPar.tasksupport = fjPool
 		val result = temperaturesPar
 			.flatMap((locAndTemp: (Location, Double)) => {
 				val locationDatapoint = locAndTemp._1
@@ -179,7 +180,7 @@ object Visualization {
 			(x, y)
 		}
 
-		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesRDD(temperatures, colors, xyValues, scale)
+		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesVanilla(temperatures, colors, xyValues, scale)
 		val img = Image(baseWidth * scale, baseHeight * scale)
 
 		Profiler.runProfiled("imgCreation") {
@@ -214,13 +215,14 @@ object Visualization {
 
 	private def computeImgValuesVanilla(temperatures: Iterable[(Location, Double)],
 																			colors: Iterable[(Double, Color)],
-																			xyValues: Seq[(Int, Int)]): Seq[((Int, Int), Color)] = {
+																			xyValues: Seq[(Int, Int)],
+																			scale: Int = 1): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValuesVanilla") {
 			val cache = mutable.HashMap[Double, Color]()
 			val xyPar = xyValues.par
-			xyPar.tasksupport = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
+			xyPar.tasksupport = fjPool
 			val xyColors = xyPar.map(xy => {
-				val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2))
+				val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2, scale))
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(xy, color)
 			}).seq
