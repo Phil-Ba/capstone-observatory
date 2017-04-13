@@ -10,16 +10,16 @@ object Profiler {
 	val logger = LoggerFactory.getLogger(Profiler.getClass)
 
 
-	def runProfiled[T](msg: String, level: Level = Level.INFO)(action: => T) = {
+	def runProfiled[T](msg: String, level: Level = Level.INFO)(action: => T): T = {
 		val t1 = System.nanoTime
 		val t = action
-		val duration = (System.nanoTime - t1) / 1e9D * 60
+		val duration = math.floor((System.nanoTime - t1) * 100 / (1e9D * 60)) / 100
 		level match {
-			case Level.INFO => logger.info(msg + " took {} seconds.", duration)
-			case Level.DEBUG => logger.debug(msg + " took {} seconds.", duration)
-			case Level.TRACE => logger.trace(msg + " took {} seconds.", duration)
-			case Level.WARN => logger.warn(msg + " took {} seconds.", duration)
-			case Level.ERROR => logger.error(msg + " took {} seconds.", duration)
+			case Level.INFO => logger.info(msg + " took {} minutes.", duration)
+			case Level.DEBUG => logger.debug(msg + " took {} minutes.", duration)
+			case Level.TRACE => logger.trace(msg + " took {} minutes.", duration)
+			case Level.WARN => logger.warn(msg + " took {} minutes.", duration)
+			case Level.ERROR => logger.error(msg + " took {} minutes.", duration)
 		}
 		t
 	}
