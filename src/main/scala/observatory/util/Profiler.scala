@@ -13,7 +13,7 @@ object Profiler {
 	def runProfiled[T](msg: String, level: Level = Level.INFO)(action: => T) = {
 		val t1 = System.nanoTime
 		val t = action
-		val duration = (System.nanoTime - t1) / 1e9d
+		val duration = (System.nanoTime - t1) / 1e9D * 60
 		level match {
 			case Level.INFO => logger.info(msg + " took {} seconds.", duration)
 			case Level.DEBUG => logger.debug(msg + " took {} seconds.", duration)
