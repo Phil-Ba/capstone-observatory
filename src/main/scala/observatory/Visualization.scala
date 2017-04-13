@@ -19,6 +19,9 @@ object Visualization {
 
 	val R = 6372.8 //radius in km
 	val p = 6
+	val scale: Int = 2
+	val baseWidth: Int = 360
+	val baseHeight: Int = 180
 
 	Main.loggerConfig
 
@@ -122,7 +125,8 @@ object Visualization {
 	}
 
 	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], location: Location) = {
-		val result = temperatures.toSeq
+		val result = temperatures
+			.par
 			.flatMap((locAndTemp: (Location, Double)) => {
 				val locationDatapoint = locAndTemp._1
 				val temp = locAndTemp._2
@@ -166,18 +170,15 @@ object Visualization {
 		* @return A 360×180 image where each pixel shows the predicted temperature at its location
 		*/
 	def visualize(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)]): Image = {
-		if (logger.isDebugEnabled()) {
-			colors.foreach(c => logger.debug("t{}:c{}", c._1, c._2))
-		}
-		val img = Image(360, 180)
+		val img = Image(baseWidth, baseHeight)
 		val xyValues = for {
-			x <- 0 until 360
-			y <- 0 until 180
+			x <- 0 until baseWidth * scale
+			y <- 0 until baseHeight * scale
 		} yield {
 			(x, y)
 		}
 
-		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesVanilla(temperatures, colors, xyValues)
+		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesRDD(temperatures, colors, xyValues)
 
 		Profiler.runProfiled("imgCreation") {
 			xyColors.foreach(
@@ -189,7 +190,6 @@ object Visualization {
 			)
 			img
 		}
-
 	}
 
 	private def computeImgValuesRDD(temperatures: Iterable[(Location, Double)],
@@ -214,17 +214,17 @@ object Visualization {
 																			xyValues: Seq[(Int, Int)]): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValuesVanilla") {
 			val cache = mutable.HashMap[Double, Color]()
-			xyValues.par.map(xy => {
+			val xyColors = xyValues.par.map(xy => {
 				val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2))
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(xy, color)
-			})
-				.seq
+			}).seq
+			xyColors
 		}
 	}
 
-	private def pixelToGps(x: Int, y: Int) = {
-		Location(90 - y, x - 180)
+	private[observatory] def pixelToGps(x: Int, y: Int) = {
+		Location(x - (baseWidth * scale) / 2, (baseHeight * scale) / 2 - y)
 	}
 
 }
