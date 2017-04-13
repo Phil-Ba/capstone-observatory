@@ -3,6 +3,7 @@ package observatory
 import leaflet.{L, MapOptions, ZoomOptions}
 import org.scalajs.dom.html.Input
 import org.scalajs.dom.{Event, Node, document}
+import sun.misc.Signal
 
 import scala.scalajs.js
 import scalatags.JsDom._

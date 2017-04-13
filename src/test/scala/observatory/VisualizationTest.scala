@@ -44,22 +44,23 @@ class VisualizationTest extends FunSuite with Matchers with TableDrivenPropertyC
 		)
 
 
+		val year = 1975
 		val records = Extraction
-			.locationYearlyAverageRecords(Extraction.locateTemperatures(2015, "/stations.csv", "/2015.csv"))
+			.locationYearlyAverageRecords(Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv"))
 
 		val t1 = System.nanoTime
-		val result = Visualization.visualize(records, grads)
+		val result = Visualization.visualize(records, grads, 2)
 		val duration = (System.nanoTime - t1) / 1e9d
-		result.output("vizualImg2015.png")
+		result.output(s"vizualImg$year.png")
 		println(duration)
 		println(result)
 
 	}
 
 	test("pixelToGps") {
-		val scale = Visualization.scale
-		val baseWidth = Visualization.baseWidth * scale
-		val baseHeight = Visualization.baseHeight * scale
+		val scale = 2
+		val baseWidth = Visualization.baseWidth
+		val baseHeight = Visualization.baseHeight
 		val testData = Table(
 			("x", "y", "expectedLocation"),
 			//img top left
@@ -75,7 +76,7 @@ class VisualizationTest extends FunSuite with Matchers with TableDrivenPropertyC
 		)
 
 		forEvery(testData) { (x, y, expectedLocation) =>
-			Visualization.pixelToGps(x, y) shouldBe expectedLocation
+			Visualization.pixelToGps(x, y, scale) shouldBe expectedLocation
 		}
 	}
 
