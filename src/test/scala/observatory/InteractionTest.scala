@@ -1,5 +1,7 @@
 package observatory
 
+import java.io.{FileInputStream, ObjectInputStream}
+
 import org.scalatest.FunSuite
 import org.scalatest.prop.Checkers
 
@@ -20,11 +22,10 @@ class InteractionTest extends FunSuite with Checkers {
 			(-60D, Color(0, 0, 0))
 		)
 
-		val year = 1975
-		val records = Extraction
-			.locationYearlyAverageRecords(Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv"))
-
-		val data: Seq[(Int, Iterable[(Location, Double)])] = Seq((year, records))
+		val fis = new FileInputStream("src/test/resources/1975.ser")
+		val ois = new ObjectInputStream(fis)
+		val data: Seq[(Int, Iterable[(Location, Double)])] = ois.readObject()
+			.asInstanceOf[Seq[(Int, Iterable[(Location, Double)])]]
 
 		def imgFunction(year: Int, zoom: Int, x: Int, y: Int, data: Iterable[(Location, Double)]) = {
 			val tileImage = Interaction.tile(data, grads, zoom, x, y)
@@ -33,7 +34,7 @@ class InteractionTest extends FunSuite with Checkers {
 		}
 
 		val t1 = System.nanoTime
-		Interaction.generateTiles(data, imgFunction)
+		Interaction.generateTiles(data, imgFunction, 1)
 		val duration = (System.nanoTime - t1) / 1e9d
 		println(duration)
 	}
