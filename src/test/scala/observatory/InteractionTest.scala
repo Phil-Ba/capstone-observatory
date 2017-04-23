@@ -8,4 +8,5 @@ import org.scalatest.prop.Checkers
 @RunWith(classOf[JUnitRunner])
 class InteractionTest extends FunSuite with Checkers {
 
+
 }

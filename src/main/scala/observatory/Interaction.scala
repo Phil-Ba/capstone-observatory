@@ -1,11 +1,21 @@
 package observatory
 
-import com.sksamuel.scrimage.Image
+import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
+import observatory.Visualization.{interpolateColor, predictTemperature}
+import observatory.util.{Profiler, SlipperyMap}
+
+import scala.collection.mutable
 
 /**
 	* 3rd milestone: interactive visualization
 	*/
 object Interaction {
+
+	val fjPool = Main.fjPool
+	Main.loggerConfig
+	type PixelWithLocation = (Int, Int, Location)
+	type PixelWithColour = (Int, Int, Color)
+
 
 	/**
 		* @param zoom Zoom level
@@ -15,7 +25,8 @@ object Interaction {
 		*         .org/wiki/Slippy_map_tilenames
 		*/
 	def tileLocation(zoom: Int, x: Int, y: Int): Location = {
-		???
+		val latLon = SlipperyMap.Tile(x, y, zoom).toLatLon
+		Location(latLon.lat, latLon.lon)
 	}
 
 	/**
@@ -28,7 +39,53 @@ object Interaction {
 		*/
 	def tile(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)], zoom: Int, x: Int,
 					 y: Int): Image = {
-		???
+		val upperLeft = tileLocation(zoom, x, y)
+		val lowerRight = tileLocation(zoom, x + 1, y + 1)
+
+		val startX = upperLeft.lon
+		val startY = upperLeft.lat
+		val stepX = (lowerRight.lon - upperLeft.lon) / 256
+		val stepY = (lowerRight.lat - upperLeft.lat) / 256
+
+		val pixelsWithLocation = for {
+			x <- 0 until 256
+			y <- 0 until 256
+		} yield {
+			(x, y, Location(startY + y * stepY, startX + x * stepX))
+		}
+
+		val pixels = createPixels(temperatures, colors, pixelsWithLocation)
+		mapPixels2Image(pixels)
+	}
+
+	private def createPixels(temperatures: Iterable[(Location, Double)],
+													 colors: Iterable[(Double, Color)],
+													 pixelsWithLocation: Seq[PixelWithLocation]) = {
+		Profiler.runProfiled("createPixels") {
+			val cache = mutable.HashMap[Double, Color]()
+			val xyPar = pixelsWithLocation.par
+			xyPar.tasksupport = fjPool
+			val pixelsWithColor = xyPar.map(pixelWithLocation => {
+				val temperature = predictTemperature(temperatures, pixelWithLocation._3)
+				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
+				(pixelWithLocation._1, pixelWithLocation._2, color)
+			}).seq
+			pixelsWithColor
+		}
+	}
+
+	def mapPixels2Image(pixels: Seq[PixelWithColour]): Image = {
+		val img = Image(256, 256)
+
+		Profiler.runProfiled("imgCreation") {
+			pixels.foreach(
+				pixelWithColor => {
+					val color = pixelWithColor._3
+					img.setPixel(pixelWithColor._1, pixelWithColor._2, Pixel(RGBColor(color.red, color.green, color.blue, 127)))
+				}
+			)
+			img
+		}
 	}
 
 	/**
@@ -43,7 +100,16 @@ object Interaction {
 													 yearlyData: Iterable[(Int, Data)],
 													 generateImage: (Int, Int, Int, Int, Data) => Unit
 												 ): Unit = {
-		???
+		yearlyData.foreach(data => {
+			for {
+				zoom <- 0 to 3
+				tiles <- 1 to Math.pow(2, 2 * zoom)
+				x <- 0 until tiles
+				y <- 0 until tiles
+			} yield {
+				generateImage(data._1, zoom, x, y, data._2)
+			}
+		})
 	}
 
 }
