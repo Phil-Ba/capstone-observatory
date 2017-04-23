@@ -36,7 +36,6 @@ object Visualization {
 		* @return The predicted temperature at `location`
 		*/
 	def predictTemperature(temperatures: Iterable[(Location, Double)], location: Location): Double = {
-		logger.debug("Input size: {}", temperatures.seq.size)
 		Profiler.runProfiled("predictTemperature", Level.DEBUG) {
 			val result = temperatures.find(temp => temp._1 == location)
 				.map(_._2)
