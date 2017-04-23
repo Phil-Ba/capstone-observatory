@@ -11,12 +11,14 @@ object Main {
 
 	lazy val fjPool = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
 
+	def createFjPool(size: Int) = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(size))
+
 	lazy val loggerConfig = {
 
 		val console = new ConsoleAppender
 		//create appender
 		//configure the appender
-		val PATTERN = "[%d{HH:mm:ss}] ][%p][%C{1}] %m%n"
+		val PATTERN = "[%d{HH:mm:ss}][%p][%C{1}] %m%n"
 		console.setLayout(new PatternLayout(PATTERN))
 		console.setThreshold(Level.ALL)
 		console.activateOptions()
