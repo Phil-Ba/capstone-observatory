@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
 import scala.collection.mutable
-import scala.collection.parallel.ForkJoinTaskSupport
 import scala.math._
 
 /**
@@ -22,9 +21,9 @@ object Visualization {
 	val p = 6
 	val baseWidth: Int = 360
 	val baseHeight: Int = 180
-	private val fjPool = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
 
 	Main.loggerConfig
+	val fjPool = Main.fjPool
 
 	import Main.spark
 	import spark.implicits._

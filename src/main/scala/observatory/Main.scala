@@ -2,10 +2,14 @@ package observatory
 
 import org.apache.spark.sql.SparkSession
 
+import scala.collection.parallel.ForkJoinTaskSupport
+
 object Main {
 	//object Main extends App {
 
 	import org.apache.log4j.{ConsoleAppender, Level, Logger, PatternLayout}
+
+	lazy val fjPool = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(4))
 
 	lazy val loggerConfig = {
 
