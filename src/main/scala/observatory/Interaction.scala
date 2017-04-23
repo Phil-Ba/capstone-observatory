@@ -101,15 +101,26 @@ object Interaction {
 													 generateImage: (Int, Int, Int, Int, Data) => Unit
 												 ): Unit = {
 		yearlyData.foreach(data => {
-			for {
+			val inputs = for {
 				zoom <- 0 to 3
-				tiles <- 1 to Math.pow(2, 2 * zoom)
+				tiles <- 0 until Math.pow(2, 2 * zoom).toInt
 				x <- 0 until tiles
 				y <- 0 until tiles
 			} yield {
-				generateImage(data._1, zoom, x, y, data._2)
+				(data._1, zoom, x, y, data._2)
 			}
+			val parSeq = inputs.par
+			parSeq.tasksupport = fjPool
+			parSeq.foreach(input => {
+				val year = input._1
+				val zoom = input._2
+				val x = input._3
+				val y = input._4
+				val data = input._5
+				Profiler.runProfiled(s"generateTile(x:$x,y:$y,z:$zoom)") {
+					generateImage(year, zoom, x, y, data)
+				}
+			})
 		})
 	}
-
 }

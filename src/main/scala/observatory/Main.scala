@@ -16,7 +16,7 @@ object Main {
 		val console = new ConsoleAppender
 		//create appender
 		//configure the appender
-		val PATTERN = "[%p][%C{1}] %m%n"
+		val PATTERN = "[%d{HH:mm:ss}] ][%p][%C{1}] %m%n"
 		console.setLayout(new PatternLayout(PATTERN))
 		console.setThreshold(Level.ALL)
 		console.activateOptions()
