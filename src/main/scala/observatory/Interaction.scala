@@ -11,7 +11,7 @@ import scala.collection.mutable
 	*/
 object Interaction {
 
-	val fjPool = Main.fjPool
+	val pixelPool = Main.createFjPool(4)
 	Main.loggerConfig
 	type PixelWithLocation = (Int, Int, Location)
 	type PixelWithColour = (Int, Int, Color)
@@ -64,7 +64,7 @@ object Interaction {
 		Profiler.runProfiled("createPixels") {
 			val cache = mutable.HashMap[Double, Color]()
 			val xyPar = pixelsWithLocation.par
-			xyPar.tasksupport = fjPool
+			xyPar.tasksupport = pixelPool
 			val pixelsWithColor = xyPar.map(pixelWithLocation => {
 				val temperature = predictTemperature(temperatures, pixelWithLocation._3)
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
@@ -98,19 +98,13 @@ object Interaction {
 		*/
 	def generateTiles[Data](
 													 yearlyData: Iterable[(Int, Data)],
-													 generateImage: (Int, Int, Int, Int, Data) => Unit
+													 generateImage: (Int, Int, Int, Int, Data) => Unit,
+													 zoomLvl: Int = 3
 												 ): Unit = {
 		yearlyData.foreach(data => {
-			val inputs = for {
-				zoom <- 0 to 3
-				tiles <- 0 until Math.pow(2, 2 * zoom).toInt
-				x <- 0 until tiles
-				y <- 0 until tiles
-			} yield {
-				(data._1, zoom, x, y, data._2)
-			}
+			val inputs = generateInputs(zoomLvl, data)
 			val parSeq = inputs.par
-			parSeq.tasksupport = fjPool
+			parSeq.tasksupport = Main.createFjPool(2)
 			parSeq.foreach(input => {
 				val year = input._1
 				val zoom = input._2
@@ -122,5 +116,16 @@ object Interaction {
 				}
 			})
 		})
+	}
+
+	def generateInputs[Data](zoomLvl: Int, data: (Int, Data)) = {
+		for {
+			zoom <- 0 to zoomLvl
+			tiles = Math.round(Math.pow(2, 2 * zoom) / 2).toInt
+			x <- 0 until tiles
+			y <- 0 until tiles
+		} yield {
+			(data._1, zoom, x, y, data._2)
+		}
 	}
 }
