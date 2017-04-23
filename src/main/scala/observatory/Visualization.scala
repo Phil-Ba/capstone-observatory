@@ -3,7 +3,7 @@ package observatory
 import java.lang.Math.pow
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
-import observatory.util.{InterpolationUtil, Profiler}
+import observatory.util.{InterpolationUtil, Optimizer, Profiler}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.functions.sum
 import org.slf4j.LoggerFactory
@@ -146,12 +146,19 @@ object Visualization {
 		(v1, v2)
 	}
 
-	protected[observatory] def approximateDistance(lat: Double, lon: Double, location2: Location): Double = {
+	protected[observatory] def approximateDistance2(lat: Double, lon: Double, location2: Location): Double = {
 		val dLat = (lat - location2.lat).toRadians
 		val dLon = (lon - location2.lon).toRadians
 
 		val a = pow(sin(dLat / 2), 2) + pow(sin(dLon / 2), 2) * cos(lat.toRadians) * cos(location2.lat.toRadians)
 		val c = 2 * asin(sqrt(a))
+		R * c
+	}
+
+	protected[observatory] def approximateDistance(lat: Double, lon: Double, location2: Location): Double = {
+		val a = sin(lat) * sin(location2.lat)
+		val b = cos(lat) * cos(location2.lat) * cos(abs(lon - location2.lon))
+		val c = Optimizer.acos(a + b)
 		R * c
 	}
 
