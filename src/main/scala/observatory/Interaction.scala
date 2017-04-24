@@ -103,9 +103,10 @@ object Interaction {
 												 ): Unit = {
 		yearlyData.foreach(data => {
 			val inputs = generateInputs(zoomLvl, data)
-			val parSeq = inputs.par
-			parSeq.tasksupport = Main.createFjPool(2)
-			parSeq.foreach(input => {
+			//			val parSeq = inputs.par
+			//			parSeq.tasksupport = Main.createFjPool(2)
+			//			parSeq.foreach(input => {
+			inputs.foreach(input => {
 				val year = input._1
 				val zoom = input._2
 				val x = input._3
@@ -121,7 +122,7 @@ object Interaction {
 	def generateInputs[Data](zoomLvl: Int, data: (Int, Data)) = {
 		for {
 			zoom <- 0 to zoomLvl
-			tiles = Math.round(Math.pow(2, 2 * zoom) / 2).toInt
+			tiles = Math.round(Math.pow(2, 2 * zoom) / Math.pow(2, zoom)).toInt
 			x <- 0 until tiles
 			y <- 0 until tiles
 		} yield {
