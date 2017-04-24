@@ -1,12 +1,12 @@
 package observatory.util
 
 import observatory.Color
-import observatory.util.InterpolationUtil.RgbPoint
+import observatory.util.ColorInterpolationUtil.RgbPoint
 
 /**
 	* Created by philba on 4/11/17.
 	*/
-class InterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
+class ColorInterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
 
 	val datapoints = datapointsInput.sortBy(_._1)
 
@@ -45,7 +45,7 @@ class InterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
 
 }
 
-object InterpolationUtil {
+object ColorInterpolationUtil {
 
 	private type RgbPoint = (Double, Int)
 

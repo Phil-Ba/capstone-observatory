@@ -7,7 +7,7 @@ import org.scalatest.{FunSuite, Matchers}
 /**
 	* Created by philba on 4/11/17.
 	*/
-class InterpolationUtilTest extends FunSuite with TableDrivenPropertyChecks with Matchers {
+class ColorInterpolationUtilTest extends FunSuite with TableDrivenPropertyChecks with Matchers {
 
 	test("interpolation") {
 		val testData = Table(
@@ -20,7 +20,7 @@ class InterpolationUtilTest extends FunSuite with TableDrivenPropertyChecks with
 		)
 
 		forEvery(testData) { (p0, p1, x, expected) => {
-			new InterpolationUtil(Nil).interpolate(p0, p1, x) shouldBe expected
+			new ColorInterpolationUtil(Nil).interpolate(p0, p1, x) shouldBe expected
 		}
 		}
 	}
@@ -45,7 +45,7 @@ class InterpolationUtilTest extends FunSuite with TableDrivenPropertyChecks with
 		)
 
 		forEvery(testData) { (value, expectedValues) => {
-			val cut = new InterpolationUtil(seq)
+			val cut = new ColorInterpolationUtil(seq)
 
 			val result = cut.findStartingPoints(value)
 
