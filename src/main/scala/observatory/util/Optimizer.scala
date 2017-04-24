@@ -9,7 +9,7 @@ object Optimizer {
 		val negate = if (i < 0) {
 			-1
 		} else {
-			1
+			0
 		}
 		val x = math.abs(i)
 		var ret = -0.0187293
@@ -23,6 +23,5 @@ object Optimizer {
 		ret = ret - 2 * negate * ret
 		negate * 3.14159265358979 + ret
 	}
-
 
 }
