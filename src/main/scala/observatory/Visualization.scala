@@ -3,14 +3,11 @@ package observatory
 import java.lang.Math.pow
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
-import observatory.util.{InterpolationUtil, Optimizer, Profiler}
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.functions.sum
+import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler}
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
 import scala.collection.mutable
-import scala.math._
 
 /**
 	* 2nd milestone: basic visualization
@@ -24,9 +21,6 @@ object Visualization {
 
 	Main.loggerConfig
 	val fjPool = Main.fjPool
-
-	import Main.spark
-	import spark.implicits._
 
 	private val logger = LoggerFactory.getLogger(Visualization.getClass)
 
@@ -47,82 +41,6 @@ object Visualization {
 		}
 	}
 
-	private def approxTemperatureSpark(temperatures: Iterable[(Location, Double)], location: Location) = {
-		val result = spark.sparkContext
-			.parallelize(temperatures.toSeq)
-			.toDF("location", "temperature")
-			.map(r => {
-				val temp = r.getAs[Double]("temperature")
-				val locRow = r.getAs[Row]("location")
-				val distance = approximateDistance(locRow.getAs[Double]("lat"), locRow.getAs[Double]("lon"),
-					location)
-				val invWeight = 1 / pow(distance, p)
-				(temp * invWeight, invWeight)
-			})
-			.select(sum($"_1").as[Double], sum($"_2").as[Double])
-			.first()
-
-		result
-	}
-
-	private def approxTemperatureSparkPremapped(temperatures: Iterable[(Location, Double)], location: Location) = {
-		val result = spark.sparkContext
-			.parallelize(temperatures.toSeq)
-			.map(loc => (loc._1.lat, loc._1.lon, loc._2))
-			.toDF("latitude", "longitude", "temperature")
-			//			.toDF("location", "temperature")
-			.map(r => {
-			val temp = r.getAs[Double]("temperature")
-			//				val locRow = r.getAs[Row]("location")
-			//				val distance = approximateDistance(locRow.getAs[Double]("lat"), locRow.getAs[Double]("lon"),
-			//					location)
-			val distance = approximateDistance(r.getAs("latitude"), r.getAs("longitude"), location)
-			val invWeight = 1 / pow(distance, p)
-			(temp * invWeight, invWeight)
-		})
-			//			.withColumnRenamed("_1", "weightedTemp")
-			//			.withColumnRenamed("_2", "weight")
-			.select(sum($"_1").as[Double], sum($"_2").as[Double])
-			//			.select(sum($"weightedTemp").as("weightedTemp"), sum($"weight").as("weight"))
-			//			.select($"weightedTemp".divide($"weight").as[Double])
-			.first()
-		result
-	}
-
-	private def approxTemperatureSparkRDD(temperatures: Iterable[(Location, Double)], location: Location) = {
-		val result = spark.sparkContext
-			.parallelize(temperatures.toSeq)
-			.flatMap((locAndTemp: (Location, Double)) => {
-				val locationDatapoint = locAndTemp._1
-				val temp = locAndTemp._2
-				val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
-				val invWeight = 1 / pow(distance, p)
-				Seq((1, temp * invWeight), (2, invWeight))
-			})
-			.groupByKey()
-			.aggregateByKey(0.0D)((sum: Double, values: Iterable[Double]) => sum + values.sum, (d1, d2) => d1 + d2)
-			.collectAsMap()
-		(result(1), result(2))
-	}
-
-	private def approxTemperatureSparkRDDNoGroup(temperatures: Iterable[(Location, Double)], location: Location) = {
-		val result = spark.sparkContext
-			.parallelize(temperatures.toSeq)
-			.map((locAndTemp: (Location, Double)) => {
-				val locationDatapoint = locAndTemp._1
-				val temp = locAndTemp._2
-				val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
-				val invWeight = 1 / pow(distance, p)
-				(temp * invWeight, invWeight)
-			})
-			.cache()
-
-		val result1 = result.aggregate(0.0)(_ + _._1, _ + _)
-		val result2 = result.aggregate(0.0)(_ + _._2, _ + _)
-		result.unpersist()
-		(result1, result2)
-	}
-
 	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], location: Location) = {
 		val temperaturesPar = temperatures.par
 		temperaturesPar.tasksupport = fjPool
@@ -130,7 +48,9 @@ object Visualization {
 			.flatMap((locAndTemp: (Location, Double)) => {
 				val locationDatapoint = locAndTemp._1
 				val temp = locAndTemp._2
-				val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
+				val distance = GeoInterpolationUtil.approximateDistanceOpti(locationDatapoint.lat, locationDatapoint.lon,
+					location)
+				//				val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
 				val invWeight = 1 / pow(distance, p)
 				Seq((1, temp * invWeight), (2, invWeight))
 			})
@@ -146,29 +66,13 @@ object Visualization {
 		(v1, v2)
 	}
 
-	protected[observatory] def approximateDistance2(lat: Double, lon: Double, location2: Location): Double = {
-		val dLat = (lat - location2.lat).toRadians
-		val dLon = (lon - location2.lon).toRadians
-
-		val a = pow(sin(dLat / 2), 2) + pow(sin(dLon / 2), 2) * cos(lat.toRadians) * cos(location2.lat.toRadians)
-		val c = 2 * asin(sqrt(a))
-		R * c
-	}
-
-	protected[observatory] def approximateDistance(lat: Double, lon: Double, location2: Location): Double = {
-		val a = sin(lat) * sin(location2.lat)
-		val b = cos(lat) * cos(location2.lat) * cos(abs(lon - location2.lon))
-		val c = Optimizer.acos(a + b)
-		R * c
-	}
-
 	/**
 		* @param points Pairs containing a value and its associated color
 		* @param value  The value to interpolate
 		* @return The color that corresponds to `value`, according to the color scale defined by `points`
 		*/
 	def interpolateColor(points: Iterable[(Double, Color)], value: Double): Color = {
-		new InterpolationUtil(points.toSeq).interpolate(value)
+		new ColorInterpolationUtil(points.toSeq).interpolate(value)
 	}
 
 	/**
@@ -197,24 +101,6 @@ object Visualization {
 				}
 			)
 			img
-		}
-	}
-
-	private def computeImgValuesRDD(temperatures: Iterable[(Location, Double)],
-																	colors: Iterable[(Double, Color)],
-																	xyValues: Seq[(Int, Int)],
-																	scale: Int = 1): Seq[((Int, Int), Color)] = {
-		Profiler.runProfiled("computeImgValuesRDD") {
-			val cache = mutable.HashMap[Double, Color]()
-			val xyColors = spark.sparkContext
-				.parallelize(xyValues)
-				.map(xy => {
-					val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2, scale))
-					val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
-					(xy, color)
-				})
-				.collect()
-			xyColors
 		}
 	}
 
