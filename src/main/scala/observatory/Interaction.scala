@@ -11,7 +11,7 @@ import scala.collection.mutable
 	*/
 object Interaction {
 
-	val pixelPool = Main.createFjPool(4)
+	val pixelPool = Main.createFjPool(2)
 	Main.loggerConfig
 	type PixelWithLocation = (Int, Int, Location)
 	type PixelWithColour = (Int, Int, Color)

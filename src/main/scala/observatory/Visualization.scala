@@ -20,7 +20,8 @@ object Visualization {
 	val baseHeight: Int = 180
 
 	Main.loggerConfig
-	val fjPool = Main.fjPool
+	private val tempApproxPool = Main.createFjPool(4)
+	private val pixelCalcPool = Main.createFjPool(2)
 
 	private val logger = LoggerFactory.getLogger(Visualization.getClass)
 
@@ -41,15 +42,15 @@ object Visualization {
 		}
 	}
 
-	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], location: Location) = {
+	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], locationToapprox: Location) = {
 		val temperaturesPar = temperatures.par
-		temperaturesPar.tasksupport = fjPool
+		temperaturesPar.tasksupport = tempApproxPool
 		val result = temperaturesPar
 			.flatMap((locAndTemp: (Location, Double)) => {
 				val locationDatapoint = locAndTemp._1
 				val temp = locAndTemp._2
 				val distance = GeoInterpolationUtil.approximateDistanceOpti(locationDatapoint.lat, locationDatapoint.lon,
-					location)
+					locationToapprox)
 				//				val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
 				val invWeight = 1 / pow(distance, p)
 				Seq((1, temp * invWeight), (2, invWeight))
@@ -111,7 +112,7 @@ object Visualization {
 		Profiler.runProfiled("computeImgValuesVanilla") {
 			val cache = mutable.HashMap[Double, Color]()
 			val xyPar = xyValues.par
-			xyPar.tasksupport = fjPool
+			xyPar.tasksupport = pixelCalcPool
 			val xyColors = xyPar.map(xy => {
 				val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2, scale))
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
