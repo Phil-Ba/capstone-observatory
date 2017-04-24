@@ -1,6 +1,6 @@
 package observatory
 
-import java.io.{FileInputStream, ObjectInputStream}
+import java.io.{FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
 
 import org.scalatest.FunSuite
 import org.scalatest.prop.Checkers
@@ -9,6 +9,17 @@ import scala.reflect.io.Path
 
 class InteractionTest extends FunSuite with Checkers {
 
+
+	def createTestDataSerialized(year: Int): Unit = {
+		val records = Extraction
+			.locationYearlyAverageRecords(Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv"))
+
+		val data: Seq[(Int, Iterable[(Location, Double)])] = Seq((year, records))
+		val fos = new FileOutputStream(s"src/test/resources/$year.ser")
+		val oos = new ObjectOutputStream(fos)
+		oos.writeObject(data)
+		oos.close()
+	}
 
 	test("GenerateTile from real dataset") {
 		val grads = Seq(
@@ -22,7 +33,13 @@ class InteractionTest extends FunSuite with Checkers {
 			(-60D, Color(0, 0, 0))
 		)
 
-		val fis = new FileInputStream("src/test/resources/1975.ser")
+		val serFileLocation = "src/test/resources/1975.ser"
+		val serFile = Path(serFileLocation)
+		if (serFile.exists == false) {
+			createTestDataSerialized(1975)
+		}
+
+		val fis = new FileInputStream(serFile.jfile)
 		val ois = new ObjectInputStream(fis)
 		val data: Seq[(Int, Iterable[(Location, Double)])] = ois.readObject()
 			.asInstanceOf[Seq[(Int, Iterable[(Location, Double)])]]

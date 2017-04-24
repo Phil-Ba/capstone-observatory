@@ -3,6 +3,7 @@ package observatory
 import java.lang.Math.pow
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
+import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler}
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
@@ -25,6 +26,7 @@ object Visualization {
 
 	private val logger = LoggerFactory.getLogger(Visualization.getClass)
 
+
 	/**
 		* @param temperatures Known temperaturechs: pairs containing a location and the temperature at this location
 		* @param location     Location where to predict the temperature
@@ -42,6 +44,36 @@ object Visualization {
 		}
 	}
 
+	def predictTemperatureOptimized(optimizedValues: Iterable[(OptimizedLocation, Double)],
+																	location: Location): Double = {
+		val result: (Double, Double) = approxTemperatureOptimized(optimizedValues, location)
+		result._1 / result._2
+	}
+
+	private def approxTemperatureOptimized(temperatures: Iterable[(OptimizedLocation, Double)],
+																				 locationToapprox: Location) = {
+		val temperaturesPar = temperatures.par
+		temperaturesPar.tasksupport = tempApproxPool
+		val result = temperaturesPar
+			.flatMap((locAndTemp: (OptimizedLocation, Double)) => {
+				val locationDatapoint = locAndTemp._1
+				val temp = locAndTemp._2
+				val distance = GeoInterpolationUtil.approximateDistance(locationDatapoint, locationToapprox)
+				val invWeight = 1 / pow(distance, p)
+				Seq((1, temp * invWeight), (2, invWeight))
+			})
+			.groupBy(_._1)
+
+		val v1 = result(1).aggregate(0.0D)(
+			(sum: Double, values) => sum + values._2,
+			(d1, d2) => d1 + d2)
+		val v2 = result(2).aggregate(0.0D)(
+			(sum: Double, values) => sum + values._2,
+			(d1, d2) => d1 + d2)
+
+		(v1, v2)
+	}
+
 	private def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], locationToapprox: Location) = {
 		val temperaturesPar = temperatures.par
 		temperaturesPar.tasksupport = tempApproxPool
@@ -49,9 +81,9 @@ object Visualization {
 			.flatMap((locAndTemp: (Location, Double)) => {
 				val locationDatapoint = locAndTemp._1
 				val temp = locAndTemp._2
-				val distance = GeoInterpolationUtil.approximateDistanceOpti(locationDatapoint.lat, locationDatapoint.lon,
-					locationToapprox)
-				//				val distance = approximateDistance(locationDatapoint.lat, locationDatapoint.lon, location)
+				//				val distance = GeoInterpolationUtil.approximateDistanceOpti(locationDatapoint, locationToapprox)
+				val distance = GeoInterpolationUtil
+					.approximateDistanceOpti(locationDatapoint.lat, locationDatapoint.lon, locationToapprox)
 				val invWeight = 1 / pow(distance, p)
 				Seq((1, temp * invWeight), (2, invWeight))
 			})
@@ -90,6 +122,8 @@ object Visualization {
 			(x, y)
 		}
 
+		//		val optimizedValues = temperatures.map(locAndTemp=>(OptimizedLocation(locAndTemp._1),locAndTemp._2))
+		//		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesVanillaOpti(optimizedValues, colors, xyValues, scale)
 		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesVanilla(temperatures, colors, xyValues, scale)
 		val img = Image(baseWidth * scale, baseHeight * scale)
 
@@ -115,6 +149,23 @@ object Visualization {
 			xyPar.tasksupport = pixelCalcPool
 			val xyColors = xyPar.map(xy => {
 				val temperature = predictTemperature(temperatures, pixelToGps(xy._1, xy._2, scale))
+				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
+				(xy, color)
+			}).seq
+			xyColors
+		}
+	}
+
+	private def computeImgValuesVanillaOpti(temperatures: Iterable[(OptimizedLocation, Double)],
+																					colors: Iterable[(Double, Color)],
+																					xyValues: Seq[(Int, Int)],
+																					scale: Int = 1): Seq[((Int, Int), Color)] = {
+		Profiler.runProfiled("computeImgValuesVanilla") {
+			val cache = mutable.HashMap[Double, Color]()
+			val xyPar = xyValues.par
+			xyPar.tasksupport = pixelCalcPool
+			val xyColors = xyPar.map(xy => {
+				val temperature = predictTemperatureOptimized(temperatures, pixelToGps(xy._1, xy._2, scale))
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(xy, color)
 			}).seq

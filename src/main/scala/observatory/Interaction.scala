@@ -1,8 +1,10 @@
 package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
-import observatory.Visualization.{interpolateColor, predictTemperature}
+import observatory.Visualization.interpolateColor
+import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{Profiler, SlipperyMap}
+import org.slf4j.event.Level
 
 import scala.collection.mutable
 
@@ -11,7 +13,7 @@ import scala.collection.mutable
 	*/
 object Interaction {
 
-	val pixelPool = Main.createFjPool(2)
+	private val pixelPool = Main.createFjPool(2)
 	Main.loggerConfig
 	type PixelWithLocation = (Int, Int, Location)
 	type PixelWithColour = (Int, Int, Color)
@@ -53,8 +55,10 @@ object Interaction {
 		} yield {
 			(x, y, Location(startY + y * stepY, startX + x * stepX))
 		}
-
-		val pixels = createPixels(temperatures, colors, pixelsWithLocation)
+		val optimizedValues = temperatures.map(tempAndLocation => {
+			(OptimizedLocation(tempAndLocation._1), tempAndLocation._2)
+		})
+		val pixels = createPixelsOptimized(optimizedValues, colors, pixelsWithLocation)
 		mapPixels2Image(pixels)
 	}
 
@@ -63,10 +67,28 @@ object Interaction {
 													 pixelsWithLocation: Seq[PixelWithLocation]) = {
 		Profiler.runProfiled("createPixels") {
 			val cache = mutable.HashMap[Double, Color]()
-			val xyPar = pixelsWithLocation.par
-			xyPar.tasksupport = pixelPool
+			//			val xyPar = pixelsWithLocation.par
+			val xyPar = pixelsWithLocation
+			//			xyPar.tasksupport = pixelPool
 			val pixelsWithColor = xyPar.map(pixelWithLocation => {
-				val temperature = predictTemperature(temperatures, pixelWithLocation._3)
+				val temperature = Visualization.predictTemperature(temperatures, pixelWithLocation._3)
+				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
+				(pixelWithLocation._1, pixelWithLocation._2, color)
+			}).seq
+			pixelsWithColor
+		}
+	}
+
+	private def createPixelsOptimized(temperatures: Iterable[(OptimizedLocation, Double)],
+																		colors: Iterable[(Double, Color)],
+																		pixelsWithLocation: Seq[PixelWithLocation]) = {
+		Profiler.runProfiled("createPixels") {
+			val cache = mutable.HashMap[Double, Color]()
+			//			val xyPar = pixelsWithLocation.par
+			val xyPar = pixelsWithLocation
+			//			xyPar.tasksupport = pixelPool
+			val pixelsWithColor = xyPar.map(pixelWithLocation => {
+				val temperature = Visualization.predictTemperatureOptimized(temperatures, pixelWithLocation._3)
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(pixelWithLocation._1, pixelWithLocation._2, color)
 			}).seq
@@ -112,7 +134,7 @@ object Interaction {
 				val x = input._3
 				val y = input._4
 				val data = input._5
-				Profiler.runProfiled(s"generateTile(x:$x,y:$y,z:$zoom)") {
+				Profiler.runProfiled(s"generateTile(x:$x,y:$y,z:$zoom)", Level.DEBUG) {
 					generateImage(year, zoom, x, y, data)
 				}
 			})
