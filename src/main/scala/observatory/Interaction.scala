@@ -3,8 +3,8 @@ package observatory
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
 import observatory.Visualization.interpolateColor
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
-import observatory.util.{Profiler, SlipperyMap}
-import observatory.viz.VisualizationOpti
+import observatory.util.{GeoInterpolationUtil, Profiler, SlipperyMap}
+import observatory.viz.VisualizationGeneric
 import org.slf4j.event.Level
 
 import scala.collection.mutable
@@ -91,7 +91,8 @@ object Interaction {
 			val xyPar = pixelsWithLocation
 			//			xyPar.tasksupport = pixelPool
 			val pixelsWithColor = xyPar.map(pixelWithLocation => {
-				val temperature = VisualizationOpti.predictTemperature(temperatures, pixelWithLocation._3)
+				val temperature = VisualizationGeneric.predictTemperature(temperatures, pixelWithLocation._3,
+					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(pixelWithLocation._1, pixelWithLocation._2, color)
 			}).seq

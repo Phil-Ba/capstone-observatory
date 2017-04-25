@@ -1,8 +1,8 @@
 package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
-import observatory.util.{ColorInterpolationUtil, Profiler}
-import observatory.viz.VisualizationVanilla
+import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler}
+import observatory.viz.VisualizationGeneric
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
@@ -34,7 +34,8 @@ object Visualization {
 			val result = temperatures.find(temp => temp._1 == location)
 				.map(_._2)
 				.getOrElse({
-					val result: (Double, Double) = VisualizationVanilla.approxTemperature(temperatures, location)
+					val result: (Double, Double) = VisualizationGeneric.approxTemperature(temperatures, location,
+						GeoInterpolationUtil.approximateDistance(_: Location, _))
 					//					val result: (Double, Double) = VisualizationOpti.approxTemperature(optimizedLocations, location)
 					result._1 / result._2
 				})
@@ -66,8 +67,12 @@ object Visualization {
 		}
 
 		//		val optimizedLocations = VisualizationOpti.mapToOptimizedLocations(temperatures)
-		//		val xyColors: Seq[((Int, Int), Color)] = VisualizationOpti.computeImgValues(optimizedLocations, colors, xyValues, scale)
-		val xyColors: Seq[((Int, Int), Color)] = VisualizationVanilla.computeImgValues(temperatures, colors, xyValues, scale)
+		//		val xyColors: Seq[((Int, Int), Color)] = VisualizationOpti.computeImgValues(optimizedLocations, colors,
+		// xyValues, scale)
+		val xyColors: Seq[((Int, Int), Color)] = VisualizationGeneric.computeImgValues(temperatures, colors, xyValues,
+			GeoInterpolationUtil.approximateDistance(_: Location, _: Location),
+			scale
+		)
 		val img = Image(baseWidth * scale, baseHeight * scale)
 
 		Profiler.runProfiled("imgCreation") {
