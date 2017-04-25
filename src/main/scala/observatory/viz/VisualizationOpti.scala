@@ -2,11 +2,9 @@ package observatory.viz
 
 import java.lang.Math.pow
 
-import observatory.Visualization._
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{ColorInterpolationUtil, ConversionUtil, GeoInterpolationUtil, Profiler}
 import observatory.{Color, Location, Main}
-import org.slf4j.event.Level
 
 import scala.collection.mutable
 
@@ -24,24 +22,28 @@ object VisualizationOpti {
 	private val tempApproxPool = Main.createFjPool(4)
 	private val pixelCalcPool = Main.createFjPool(2)
 
-	def computeImgValuesVanillaOpti(temperatures: Iterable[(OptimizedLocation, Double)],
-																					colors: Iterable[(Double, Color)],
-																					xyValues: Seq[(Int, Int)],
-																					scale: Int = 1): Seq[((Int, Int), Color)] = {
+  def computeImgValues(temperatures: Iterable[(OptimizedLocation, Double)],
+                       colors: Iterable[(Double, Color)],
+                       xyValues: Seq[(Int, Int)],
+                       scale: Int = 1): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValuesVanilla") {
 			val cache = mutable.HashMap[Double, Color]()
 			val xyPar = xyValues.par
 			xyPar.tasksupport = pixelCalcPool
+      val util = new ColorInterpolationUtil(colors.toSeq)
 			val xyColors = xyPar.map(xy => {
-				val temperature = predictTemperatureOptimized(temperatures, ConversionUtil.pixelToGps(xy._1, xy._2, scale))
-				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
+        val temperature = predictTemperature(temperatures, ConversionUtil.pixelToGps(xy._1, xy._2, scale))
+        val color = cache.getOrElseUpdate(temperature, util.interpolate(temperature))
 				(xy, color)
 			}).seq
 			xyColors
 		}
 	}
 
-	def approxTemperatureOptimized(temperatures: Iterable[(OptimizedLocation, Double)],
+  def mapToOptimizedLocations(temperatures: Iterable[(Location, Double)]): Iterable[(OptimizedLocation, Double)] =
+    temperatures.map(temp => (OptimizedLocation(temp._1), temp._2))
+
+  def approxTemperature(temperatures: Iterable[(OptimizedLocation, Double)],
 																				 locationToapprox: Location) = {
 		val temperaturesPar = temperatures.par
 		temperaturesPar.tasksupport = tempApproxPool
@@ -66,9 +68,9 @@ object VisualizationOpti {
 	}
 
 
-	def predictTemperatureOptimized(optimizedValues: Iterable[(OptimizedLocation, Double)],
-																	location: Location): Double = {
-		val result: (Double, Double) = approxTemperatureOptimized(optimizedValues, location)
+  def predictTemperature(optimizedValues: Iterable[(OptimizedLocation, Double)],
+                         location: Location): Double = {
+    val result: (Double, Double) = approxTemperature(optimizedValues, location)
 		result._1 / result._2
 	}
 

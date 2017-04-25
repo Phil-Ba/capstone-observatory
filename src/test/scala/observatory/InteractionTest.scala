@@ -51,7 +51,7 @@ class InteractionTest extends FunSuite with Checkers {
 		}
 
 		val t1 = System.nanoTime
-		Interaction.generateTiles(data, imgFunction, 1)
+		Interaction.generateTiles(data, imgFunction, 3)
 		val duration = (System.nanoTime - t1) / 1e9d
 		println(duration)
 	}

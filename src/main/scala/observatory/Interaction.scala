@@ -4,6 +4,7 @@ import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
 import observatory.Visualization.interpolateColor
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{Profiler, SlipperyMap}
+import observatory.viz.VisualizationOpti
 import org.slf4j.event.Level
 
 import scala.collection.mutable
@@ -41,6 +42,7 @@ object Interaction {
 		*/
 	def tile(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)], zoom: Int, x: Int,
 					 y: Int): Image = {
+		???
 		val upperLeft = tileLocation(zoom, x, y)
 		val lowerRight = tileLocation(zoom, x + 1, y + 1)
 
@@ -82,13 +84,14 @@ object Interaction {
 	private def createPixelsOptimized(temperatures: Iterable[(OptimizedLocation, Double)],
 																		colors: Iterable[(Double, Color)],
 																		pixelsWithLocation: Seq[PixelWithLocation]) = {
+		???
 		Profiler.runProfiled("createPixels") {
 			val cache = mutable.HashMap[Double, Color]()
 			//			val xyPar = pixelsWithLocation.par
 			val xyPar = pixelsWithLocation
 			//			xyPar.tasksupport = pixelPool
 			val pixelsWithColor = xyPar.map(pixelWithLocation => {
-				val temperature = Visualization.predictTemperatureOptimized(temperatures, pixelWithLocation._3)
+				val temperature = VisualizationOpti.predictTemperature(temperatures, pixelWithLocation._3)
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(pixelWithLocation._1, pixelWithLocation._2, color)
 			}).seq
@@ -124,6 +127,7 @@ object Interaction {
 													 zoomLvl: Int = 3
 												 ): Unit = {
 		yearlyData.foreach(data => {
+			???
 			val inputs = generateInputs(zoomLvl, data)
 			//			val parSeq = inputs.par
 			//			parSeq.tasksupport = Main.createFjPool(2)
