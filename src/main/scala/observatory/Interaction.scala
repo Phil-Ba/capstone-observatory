@@ -91,7 +91,7 @@ object Interaction {
 			val xyPar = pixelsWithLocation
 			//			xyPar.tasksupport = pixelPool
 			val pixelsWithColor = xyPar.map(pixelWithLocation => {
-				val temperature = VisualizationGeneric.predictTemperature(temperatures, pixelWithLocation._3,
+				val temperature = VisualizationGeneric.approxTemperature(temperatures, pixelWithLocation._3,
 					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
 				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
 				(pixelWithLocation._1, pixelWithLocation._2, color)

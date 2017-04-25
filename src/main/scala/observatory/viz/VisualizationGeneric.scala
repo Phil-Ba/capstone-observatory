@@ -33,7 +33,7 @@ object VisualizationGeneric {
 			xyPar.tasksupport = pixelCalcPool
 			val util = new ColorInterpolationUtil(colors.toSeq)
 			val xyColors = xyPar.map(xy => {
-				val temperature = predictTemperature(temperatures, ConversionUtil.pixelToGps(xy._1, xy._2, scale),
+				val temperature = approxTemperature(temperatures, ConversionUtil.pixelToGps(xy._1, xy._2, scale),
 					distanceFunction)
 				val color = cache.getOrElseUpdate(temperature, util.interpolate(temperature))
 				(xy, color)
@@ -67,15 +67,7 @@ object VisualizationGeneric {
 			(sum: Double, values) => sum + values._2,
 			(d1, d2) => d1 + d2)
 
-		(v1, v2)
-	}
-
-
-	def predictTemperature[T](optimizedValues: Iterable[(T, Double)],
-														location: Location,
-														distanceFunction: (T, Location) => Double): Double = {
-		val result: (Double, Double) = approxTemperature(optimizedValues, location, distanceFunction)
-		result._1 / result._2
+		v1 / v2
 	}
 
 }

@@ -34,10 +34,8 @@ object Visualization {
 			val result = temperatures.find(temp => temp._1 == location)
 				.map(_._2)
 				.getOrElse({
-					val result: (Double, Double) = VisualizationGeneric.approxTemperature(temperatures, location,
+					VisualizationGeneric.approxTemperature(temperatures, location,
 						GeoInterpolationUtil.approximateDistance(_: Location, _))
-					//					val result: (Double, Double) = VisualizationOpti.approxTemperature(optimizedLocations, location)
-					result._1 / result._2
 				})
 			result
 		}
