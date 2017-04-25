@@ -76,7 +76,7 @@ object VisualizationVanilla {
 			val result = temperatures.find(temp => temp._1 == location)
 				.map(_._2)
 				.getOrElse({
-					val result: (Double, Double) = approxTemperatureVanilla(temperatures, location)
+					val result: (Double, Double) = approxTemperature(temperatures, location)
 					result._1 / result._2
 				})
 			result

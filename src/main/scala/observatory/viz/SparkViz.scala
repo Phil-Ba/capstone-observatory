@@ -1,6 +1,6 @@
 package observatory.viz
 
-import observatory.util.GeoInterpolationUtil
+import observatory.util.{ConversionUtil, GeoInterpolationUtil}
 import observatory.{Color, Location, Main, Visualization}
 
 /**
@@ -113,7 +113,7 @@ object SparkViz {
 			val xyColors = spark.sparkContext
 				.parallelize(xyValues)
 				.map(xy => {
-					val temperature = Visualization.predictTemperature(temperatures, Visualization.pixelToGps(xy._1, xy._2,
+					val temperature = Visualization.predictTemperature(temperatures, ConversionUtil.pixelToGps(xy._1, xy._2,
 						scale))
 					val color = cache.getOrElseUpdate(temperature, Visualization.interpolateColor(colors, temperature))
 					(xy, color)
