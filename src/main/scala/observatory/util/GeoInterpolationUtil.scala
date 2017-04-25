@@ -22,10 +22,19 @@ object GeoInterpolationUtil {
 		R * c
 	}
 
+	protected[observatory] def approximateDistance(location: Location, location2: Location): Double = {
+		val dLat = (location.lat - location2.lat).toRadians
+		val dLon = (location.lat - location2.lon).toRadians
+
+		val a = pow(sin(dLat / 2), 2) + pow(sin(dLon / 2), 2) * cos(location.lat.toRadians) * cos(location2.lat.toRadians)
+		val c = 2 * asin(sqrt(a))
+		R * c
+	}
+
 	protected[observatory] def approximateDistance(location1: OptimizedLocation, location2: Location): Double = {
 		val lat1Rad = location2.lat.toRadians
-		val dLat = (location1.latRad - lat1Rad) / 2
-		val dLon = (location1.lonRad - location2.lon.toRadians) / 2
+		val dLat = location1.latRad - lat1Rad
+		val dLon = location1.lonRad - location2.lon.toRadians
 
 		val a = pow(sin(dLat / 2), 2) + pow(sin(dLon / 2), 2) * location1.cosLat * cos(lat1Rad)
 		val c = 2 * asin(sqrt(a))
