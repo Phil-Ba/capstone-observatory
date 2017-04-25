@@ -22,7 +22,7 @@ object VisualizationVanilla {
 	private val tempApproxPool = Main.createFjPool(4)
 	private val pixelCalcPool = Main.createFjPool(2)
 
-	def approxTemperatureVanilla(temperatures: Iterable[(Location, Double)], locationToapprox: Location) = {
+  def approxTemperature(temperatures: Iterable[(Location, Double)], locationToapprox: Location) = {
 		val temperaturesPar = temperatures.par
 		temperaturesPar.tasksupport = tempApproxPool
 		val result = temperaturesPar
@@ -47,10 +47,10 @@ object VisualizationVanilla {
 		(v1, v2)
 	}
 
-	def computeImgValuesVanilla(temperatures: Iterable[(Location, Double)],
-																			colors: Iterable[(Double, Color)],
-																			xyValues: Seq[(Int, Int)],
-																			scale: Int = 1): Seq[((Int, Int), Color)] = {
+  def computeImgValues(temperatures: Iterable[(Location, Double)],
+                       colors: Iterable[(Double, Color)],
+                       xyValues: Seq[(Int, Int)],
+                       scale: Int = 1): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValuesVanilla") {
 			val cache = mutable.HashMap[Double, Color]()
 			val xyPar = xyValues.par

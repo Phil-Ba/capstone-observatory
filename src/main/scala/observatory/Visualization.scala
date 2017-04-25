@@ -2,7 +2,7 @@ package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
 import observatory.util.{ColorInterpolationUtil, Profiler}
-import observatory.viz.VisualizationOpti
+import observatory.viz.VisualizationVanilla
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
@@ -29,12 +29,13 @@ object Visualization {
 		* @return The predicted temperature at `location`
 		*/
 	def predictTemperature(temperatures: Iterable[(Location, Double)], location: Location): Double = {
-		val optimizedLocations = VisualizationOpti.mapToOptimizedLocations(temperatures)
+		//		val optimizedLocations = VisualizationOpti.mapToOptimizedLocations(temperatures)
 		Profiler.runProfiled("predictTemperature", Level.DEBUG) {
 			val result = temperatures.find(temp => temp._1 == location)
 				.map(_._2)
 				.getOrElse({
-					val result: (Double, Double) = VisualizationOpti.approxTemperature(optimizedLocations, location)
+					val result: (Double, Double) = VisualizationVanilla.approxTemperature(temperatures, location)
+					//					val result: (Double, Double) = VisualizationOpti.approxTemperature(optimizedLocations, location)
 					result._1 / result._2
 				})
 			result
@@ -64,10 +65,9 @@ object Visualization {
 			(x, y)
 		}
 
-		val optimizedLocations = VisualizationOpti.mapToOptimizedLocations(temperatures)
-		//		val optimizedValues = temperatures.map(locAndTemp=>(OptimizedLocation(locAndTemp._1),locAndTemp._2))
-		//		val xyColors: Seq[((Int, Int), Color)] = computeImgValuesVanillaOpti(optimizedValues, colors, xyValues, scale)
-		val xyColors: Seq[((Int, Int), Color)] = VisualizationOpti.computeImgValues(optimizedLocations, colors, xyValues, scale)
+		//		val optimizedLocations = VisualizationOpti.mapToOptimizedLocations(temperatures)
+		//		val xyColors: Seq[((Int, Int), Color)] = VisualizationOpti.computeImgValues(optimizedLocations, colors, xyValues, scale)
+		val xyColors: Seq[((Int, Int), Color)] = VisualizationVanilla.computeImgValues(temperatures, colors, xyValues, scale)
 		val img = Image(baseWidth * scale, baseHeight * scale)
 
 		Profiler.runProfiled("imgCreation") {
