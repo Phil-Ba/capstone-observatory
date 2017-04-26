@@ -23,7 +23,7 @@ object TestDataUtil {
   }
 
   def fetchTestDataForYear(year: Int): Seq[(Location, Double)] = {
-    val serFileLocation = "src/test/resources/$year.ser"
+    val serFileLocation = s"src/test/resources/$year.ser"
     val serFile = Path(serFileLocation)
     if (serFile.exists == false) {
       createTestDataSerialized(1975)
