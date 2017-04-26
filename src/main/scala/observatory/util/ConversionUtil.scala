@@ -1,15 +1,17 @@
 package observatory.util
 
 import observatory.Location
-import observatory.Visualization.{baseHeight, baseWidth}
 
 /**
   * Created by pbayer on 25/04/2017.
   */
-object ConversionUtil {
+class ConversionUtil(val baseWidth: Int = 360, val baseHeight: Int = 180) {
+
+  private val startLon = -baseWidth / 2
+  private val startLat = baseHeight / 2
 
   def pixelToGps(x: Int, y: Int, scale: Int = 1) = {
-    Location(baseHeight / 2 - (y / 2), (x / 2) - baseWidth / 2)
+    Location(startLat - y / scale, x / scale + startLon)
   }
 
 }

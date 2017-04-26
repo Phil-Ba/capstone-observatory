@@ -109,11 +109,12 @@ object SparkViz {
 																	xyValues: Seq[(Int, Int)],
 																	scale: Int = 1): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValuesRDD") {
+			val conversionUtil = new ConversionUtil()
 			val cache = mutable.HashMap[Double, Color]()
 			val xyColors = spark.sparkContext
 				.parallelize(xyValues)
 				.map(xy => {
-					val temperature = Visualization.predictTemperature(temperatures, ConversionUtil.pixelToGps(xy._1, xy._2,
+					val temperature = Visualization.predictTemperature(temperatures, conversionUtil.pixelToGps(xy._1, xy._2,
 						scale))
 					val color = cache.getOrElseUpdate(temperature, Visualization.interpolateColor(colors, temperature))
 					(xy, color)

@@ -10,7 +10,7 @@ import org.scalatest.{FunSuite, Matchers}
 class ConversionUtilTest extends FunSuite with Matchers with TableDrivenPropertyChecks {
 
   test("pixelToGps") {
-    val scale = 2
+    val scale = 1
     val baseWidth = Visualization.baseWidth
     val baseHeight = Visualization.baseHeight
     val testData = Table(
@@ -27,8 +27,10 @@ class ConversionUtilTest extends FunSuite with Matchers with TableDrivenProperty
       (baseWidth, baseHeight, Location(-baseHeight / 2, baseWidth / 2))
     )
 
+    val cut = new ConversionUtil()
+
     forEvery(testData) { (x, y, expectedLocation) =>
-      ConversionUtil.pixelToGps(x, y, scale) shouldBe expectedLocation
+      cut.pixelToGps(x, y, scale) shouldBe expectedLocation
     }
   }
 

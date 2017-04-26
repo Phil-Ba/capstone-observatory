@@ -29,11 +29,12 @@ object VisualizationGeneric {
 													scale: Int = 1): Seq[((Int, Int), Color)] = {
 		Profiler.runProfiled("computeImgValues") {
 			val cache = mutable.HashMap[Double, Color]()
+			val conversionUtil = new ConversionUtil()
 			val xyPar = xyValues.par
 			xyPar.tasksupport = pixelCalcPool
 			val util = new ColorInterpolationUtil(colors.toSeq)
 			val xyColors = xyPar.map(xy => {
-				val temperature = approxTemperature(temperatures, ConversionUtil.pixelToGps(xy._1, xy._2, scale),
+				val temperature = approxTemperature(temperatures, conversionUtil.pixelToGps(xy._1, xy._2, scale),
 					distanceFunction)
 				val color = cache.getOrElseUpdate(temperature, util.interpolate(temperature))
 				(xy, color)
