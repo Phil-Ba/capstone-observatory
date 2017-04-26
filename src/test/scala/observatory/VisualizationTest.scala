@@ -1,6 +1,7 @@
 package observatory
 
 
+import observatory.util.TestDataUtil
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.TableDrivenPropertyChecks
@@ -44,11 +45,10 @@ class VisualizationTest extends FunSuite with Matchers with TableDrivenPropertyC
 		)
 
 		val year = 1975
-		val records = Extraction
-			.locationYearlyAverageRecords(Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv"))
+    val data = TestDataUtil.fetchTestDataForYear(year)
 
 		val t1 = System.nanoTime
-		val result = Visualization.visualize(records, grads, 2)
+    val result = Visualization.visualize(data, grads, 1)
 		val duration = (System.nanoTime - t1) / 1e9d
 		result.output(s"vizualImg$year.png")
 		println(duration)
