@@ -41,15 +41,17 @@ object VisualizationGeneric {
       //			xyPar.tasksupport = pixelCalcPool
 			val util = new ColorInterpolationUtil(colors.toSeq)
       val tasks: Observable[((Int, Int), Color)] = Observable.fromIterable(xyValues)
-        .mapAsync(100)(xy =>
+				.mapAsync(5)(xy =>
           //					Task {
+					//							Profiler.runProfiled(s"approxTemp for pixel $xy") {
           approxTemperature(tempObserv, conversionUtil.pixelToGps(xy._1, xy._2, scale),
             distanceFunction)
             .map(temp => {
-              val color = cache.getOrElseUpdate(temp, util.interpolate(temp))
-              (xy, color)
+							val color = cache.getOrElseUpdate(temp, util.interpolate(temp))
+							(xy, color)
               //								})
             })
+					//							}
         )
       val future = tasks.toListL.runAsync
       Await.result(future, Duration.Inf)
@@ -68,8 +70,10 @@ object VisualizationGeneric {
     //		val temperaturesPar = temperatures.par
     //		temperaturesPar.tasksupport = tempApproxPool
     //		val res: Observable[(Double, Double)] = Observable.fromIterable(temperatures)
-    val res = temperatures
-      .mapAsync(5)((locAndTemp: (T, Double)) => Task {
+		//		Profiler.runProfiled(s"approxTemp for location $locationToapprox") {
+		val res = temperatures
+			.map((locAndTemp: (T, Double)) => {
+				//				.mapAsync(1000)((locAndTemp: (T, Double)) => Task {
 				val locationDatapoint = locAndTemp._1
 				val temp = locAndTemp._2
 				val distance = distanceFunction(locationDatapoint, locationToapprox)
@@ -80,6 +84,7 @@ object VisualizationGeneric {
     val aggregation = res.foldLeftL((0.0, 0.0))((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
       .map(sums => sums._1 / sums._2)
     aggregation
+		//		}
     //		val result = Await.result(aggregation.runAsync, Duration.Inf)
     //		result._1 / result._2
     //			.groupBy(_._1)
