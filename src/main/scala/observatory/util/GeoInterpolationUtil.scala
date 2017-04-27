@@ -32,11 +32,11 @@ object GeoInterpolationUtil {
 	}
 
 	def approximateDistance(location1: OptimizedLocation, location2: Location): Double = {
-		val lat1Rad = location2.lat.toRadians
-		val dLat = location1.latRad - lat1Rad
+		val lat2Rad = location2.lat.toRadians
+		val dLat = location1.latRad - lat2Rad
 		val dLon = location1.lonRad - location2.lon.toRadians
 
-		val a = pow(sin(dLat / 2), 2) + pow(sin(dLon / 2), 2) * location1.cosLat * cos(lat1Rad)
+		val a = pow(sin(dLat / 2), 2) + pow(sin(dLon / 2), 2) * location1.cosLat * cos(lat2Rad)
 		val c = 2 * asin(sqrt(a))
 		R * c
 	}

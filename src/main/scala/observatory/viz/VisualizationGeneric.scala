@@ -39,7 +39,7 @@ object VisualizationGeneric {
 
 			val util = new ColorInterpolationUtil(colors.toSeq)
       val tasks: Observable[((Int, Int), Color)] = Observable.fromIterable(xyValues)
-				.mapAsync(5)(xy =>
+				.mapAsync(10)(xy =>
           approxTemperature(tempObserv, conversionUtil.pixelToGps(xy._1, xy._2, scale),
             distanceFunction)
             .map(temp => {
