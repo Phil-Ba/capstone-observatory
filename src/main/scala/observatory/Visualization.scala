@@ -2,9 +2,9 @@ package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
 import monix.reactive.Observable
+import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler}
 import observatory.viz.VisualizationGeneric
-import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
 import scala.concurrent.Await
@@ -15,17 +15,11 @@ import scala.concurrent.duration.Duration
 	*/
 object Visualization {
 
-	val R = 6372.8 //radius in km
 	val p = 6
 	val baseWidth: Int = 360
 	val baseHeight: Int = 180
 
 	Main.loggerConfig
-	private val tempApproxPool = Main.createFjPool(4)
-	private val pixelCalcPool = Main.createFjPool(2)
-
-	private val logger = LoggerFactory.getLogger(Visualization.getClass)
-
 
 	/**
 		* @param temperatures Known temperaturechs: pairs containing a location and the temperature at this location
@@ -71,11 +65,10 @@ object Visualization {
 			(x, y)
 		}
 
-		//		val optimizedLocations = VisualizationOpti.mapToOptimizedLocations(temperatures)
-		//		val xyColors: Seq[((Int, Int), Color)] = VisualizationOpti.computeImgValues(optimizedLocations, colors,
-		// xyValues, scale)
-		val xyColors: Seq[((Int, Int), Color)] = VisualizationGeneric.computeImgValues(temperatures, colors, xyValues,
-			GeoInterpolationUtil.approximateDistance(_: Location, _: Location),
+		val optimizedLocations = VisualizationGeneric.mapToOptimizedLocations(temperatures)
+		val xyColors: Seq[((Int, Int), Color)] = VisualizationGeneric.computeImgValues(optimizedLocations, colors,
+			xyValues,
+			GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _: Location),
 			scale
 		)
 		val img = Image(baseWidth * scale, baseHeight * scale)
