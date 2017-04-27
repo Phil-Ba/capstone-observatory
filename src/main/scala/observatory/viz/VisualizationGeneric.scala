@@ -2,11 +2,15 @@ package observatory.viz
 
 import java.lang.Math.pow
 
+import monix.eval.Task
+import monix.reactive.Observable
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{ColorInterpolationUtil, ConversionUtil, Profiler}
 import observatory.{Color, Location, Main}
 
 import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
 	* 2nd milestone: basic visualization
@@ -27,48 +31,71 @@ object VisualizationGeneric {
 													xyValues: Seq[(Int, Int)],
 													distanceFunction: (T, Location) => Double,
 													scale: Int = 1): Seq[((Int, Int), Color)] = {
+    import monix.execution.Scheduler.Implicits.global
 		Profiler.runProfiled("computeImgValues") {
 			val cache = mutable.HashMap[Double, Color]()
 			val conversionUtil = new ConversionUtil()
-			val xyPar = xyValues.par
-			xyPar.tasksupport = pixelCalcPool
+      val tempObserv = Observable.fromIterable(temperatures)
+
+      //			val xyPar = xyValues.par
+      //			xyPar.tasksupport = pixelCalcPool
 			val util = new ColorInterpolationUtil(colors.toSeq)
-			val xyColors = xyPar.map(xy => {
-				val temperature = approxTemperature(temperatures, conversionUtil.pixelToGps(xy._1, xy._2, scale),
-					distanceFunction)
-				val color = cache.getOrElseUpdate(temperature, util.interpolate(temperature))
-				(xy, color)
-			}).seq
-			xyColors
+      val tasks: Observable[((Int, Int), Color)] = Observable.fromIterable(xyValues)
+        .mapAsync(100)(xy =>
+          //					Task {
+          approxTemperature(tempObserv, conversionUtil.pixelToGps(xy._1, xy._2, scale),
+            distanceFunction)
+            .map(temp => {
+              val color = cache.getOrElseUpdate(temp, util.interpolate(temp))
+              (xy, color)
+              //								})
+            })
+        )
+      val future = tasks.toListL.runAsync
+      Await.result(future, Duration.Inf)
+      //					})
+      //			xyColors
+
 		}
 	}
 
 	def mapToOptimizedLocations(temperatures: Iterable[(Location, Double)]): Iterable[(OptimizedLocation, Double)] =
 		temperatures.map(temp => (OptimizedLocation(temp._1), temp._2))
 
-	def approxTemperature[T](temperatures: Iterable[(T, Double)],
-													 locationToapprox: Location,
-													 distanceFunction: (T, Location) => Double) = {
-		val temperaturesPar = temperatures.par
-		temperaturesPar.tasksupport = tempApproxPool
-		val result = temperaturesPar
-			.flatMap((locAndTemp: (T, Double)) => {
+  def approxTemperature[T](temperatures: Observable[(T, Double)],
+                           locationToapprox: Location,
+                           distanceFunction: (T, Location) => Double): Task[Double] = {
+    //		val temperaturesPar = temperatures.par
+    //		temperaturesPar.tasksupport = tempApproxPool
+    //		val res: Observable[(Double, Double)] = Observable.fromIterable(temperatures)
+    val res = temperatures
+      .mapAsync(5)((locAndTemp: (T, Double)) => Task {
 				val locationDatapoint = locAndTemp._1
 				val temp = locAndTemp._2
 				val distance = distanceFunction(locationDatapoint, locationToapprox)
 				val invWeight = 1 / pow(distance, p)
-				Seq((1, temp * invWeight), (2, invWeight))
+        (temp * invWeight, invWeight)
 			})
-			.groupBy(_._1)
 
-		val v1 = result(1).aggregate(0.0D)(
-			(sum: Double, values) => sum + values._2,
-			(d1, d2) => d1 + d2)
-		val v2 = result(2).aggregate(0.0D)(
-			(sum: Double, values) => sum + values._2,
-			(d1, d2) => d1 + d2)
+    val aggregation = res.foldLeftL((0.0, 0.0))((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+      .map(sums => sums._1 / sums._2)
+    aggregation
+    //		val result = Await.result(aggregation.runAsync, Duration.Inf)
+    //		result._1 / result._2
+    //			.groupBy(_._1)
+    //		res
 
-		v1 / v2
+    //			.groupBy(_._1)
+
+
+    //		val v1 = result(1).aggregate(0.0D)(
+    //			(sum: Double, values) => sum + values._2,
+    //			(d1, d2) => d1 + d2)
+    //		val v2 = result(2).aggregate(0.0D)(
+    //			(sum: Double, values) => sum + values._2,
+    //			(d1, d2) => d1 + d2)
+
+    //		v1 / v2
 	}
 
 }

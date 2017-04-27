@@ -1,10 +1,14 @@
 package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
+import monix.reactive.Observable
 import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler}
 import observatory.viz.VisualizationGeneric
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
 	* 2nd milestone: basic visualization
@@ -29,13 +33,16 @@ object Visualization {
 		* @return The predicted temperature at `location`
 		*/
 	def predictTemperature(temperatures: Iterable[(Location, Double)], location: Location): Double = {
+		import monix.execution.Scheduler.Implicits.global
+		val tempObserv = Observable.fromIterable(temperatures)
 		//		val optimizedLocations = VisualizationOpti.mapToOptimizedLocations(temperatures)
 		Profiler.runProfiled("predictTemperature", Level.DEBUG) {
 			val result = temperatures.find(temp => temp._1 == location)
 				.map(_._2)
 				.getOrElse({
-					VisualizationGeneric.approxTemperature(temperatures, location,
+					val temperature = VisualizationGeneric.approxTemperature(tempObserv, location,
 						GeoInterpolationUtil.approximateDistance(_: Location, _))
+					Await.result(temperature.runAsync, Duration.Inf)
 				})
 			result
 		}
