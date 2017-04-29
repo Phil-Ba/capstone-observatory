@@ -24,7 +24,7 @@ libraryDependencies ++= Seq(
 	"com.typesafe.akka" %% "akka-stream" % "2.4.12",
 	"com.typesafe.akka" %% "akka-stream-testkit" % "2.4.12" % Test,
 	// You don’t *have to* use Monix, but in case you want to, we have added the dependency
-	"io.monix" %% "monix" % "2.1.1",
+	"io.monix" %% "monix" % "2.2.4",
 	// You don’t *have to* use fs2, but in case you want to, we have added the dependency
 	"co.fs2" %% "fs2-io" % "0.9.2",
 	"org.scalacheck" %% "scalacheck" % "1.13.1" % Test,
