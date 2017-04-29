@@ -1,5 +1,8 @@
 package observatory.util
 
+import java.util
+import java.util.Collections
+
 import observatory.Color
 import observatory.util.ColorInterpolationUtil.RgbPoint
 
@@ -8,18 +11,23 @@ import observatory.util.ColorInterpolationUtil.RgbPoint
 	*/
 class ColorInterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
 
-	val datapoints = datapointsInput.sortBy(_._1)
+	private val cache = Collections.synchronizedMap(new util.WeakHashMap[Double, Color](1000))
 
-	def interpolate(x: Double): Color = {
-		val startingPoints = findStartingPoints(x)
-		val lower = startingPoints._1
-		val upper = startingPoints._2
-		val r = interpolate((lower._1, lower._2.red), (upper._1, upper._2.red), x)
-		val g = interpolate((lower._1, lower._2.green), (upper._1, upper._2.green), x)
-		val b = interpolate((lower._1, lower._2.blue), (upper._1, upper._2.blue), x)
-		Color(r, g, b)
+	private val datapoints = datapointsInput.sortBy(_._1)
+
+	def interpolate(temperature: Double): Color = {
+		cache.computeIfAbsent(temperature, temperatureVal => calculateColor(temperatureVal))
 	}
 
+	private def calculateColor(temperature: Double) = {
+		val startingPoints = findStartingPoints(temperature)
+		val lower = startingPoints._1
+		val upper = startingPoints._2
+		val r = interpolate((lower._1, lower._2.red), (upper._1, upper._2.red), temperature)
+		val g = interpolate((lower._1, lower._2.green), (upper._1, upper._2.green), temperature)
+		val b = interpolate((lower._1, lower._2.blue), (upper._1, upper._2.blue), temperature)
+		Color(r, g, b)
+	}
 
 	private[util] def findStartingPoints(x: Double) = {
 		findBiggerValueIndex(x) match {
