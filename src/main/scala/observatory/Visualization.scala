@@ -1,10 +1,13 @@
 package observatory
 
+import java.util.concurrent.TimeUnit
+
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
 import monix.reactive.Observable
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler}
 import observatory.viz.VisualizationGeneric
+import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
 import scala.concurrent.Await
@@ -20,6 +23,9 @@ object Visualization {
 	val baseHeight: Int = 180
 
 	Main.loggerConfig
+	val log = LoggerFactory.getLogger(this.getClass)
+
+
 
 	/**
 		* @param temperatures Known temperaturechs: pairs containing a location and the temperature at this location
@@ -36,7 +42,7 @@ object Visualization {
 				.getOrElse({
 					val temperature = VisualizationGeneric.approxTemperature(tempObserv, location,
 						GeoInterpolationUtil.approximateDistance(_: Location, _))
-					Await.result(temperature.runAsync, Duration.Inf)
+					Await.result(temperature.runAsync, Duration(7, TimeUnit.MINUTES))
 				})
 			result
 		}
@@ -58,6 +64,7 @@ object Visualization {
 		*/
 	def visualize(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)],
 								scale: Int = 1): Image = {
+		log.info(s"visualize: temperatues: $temperatures")
 		val xyValues = for {
 			x <- 0 until baseWidth * scale
 			y <- 0 until baseHeight * scale
