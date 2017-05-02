@@ -56,12 +56,8 @@ class VisualizationTest extends FunSuite with Matchers with TableDrivenPropertyC
 		val year = 1975
 		val data = TestDataUtil.fetchTestDataForYear(year)
 
-		val t1 = System.nanoTime
 		val result = Visualization.visualize(data, grads, 1)
-		val duration = (System.nanoTime - t1) / 1e9d
 		result.output(s"vizualImg$year.png")
-		println(duration)
-		println(result)
 
 	}
 
