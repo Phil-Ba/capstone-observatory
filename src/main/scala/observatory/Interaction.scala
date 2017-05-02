@@ -1,23 +1,25 @@
 package observatory
 
+import java.util.concurrent.TimeUnit
+
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
-import observatory.Visualization.interpolateColor
+import monix.reactive.Observable
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
-import observatory.util.{Profiler, SlipperyMap}
+import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler, SlipperyMap}
+import observatory.viz.VisualizationGeneric
 import org.slf4j.event.Level
 
-import scala.collection.mutable
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
 	* 3rd milestone: interactive visualization
 	*/
 object Interaction {
 
-	private val pixelPool = Main.createFjPool(2)
 	Main.loggerConfig
 	type PixelWithLocation = (Int, Int, Location)
 	type PixelWithColour = (Int, Int, Color)
-
 
 	/**
 		* @param zoom Zoom level
@@ -41,7 +43,6 @@ object Interaction {
 		*/
 	def tile(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)], zoom: Int, x: Int,
 					 y: Int): Image = {
-		???
 		val upperLeft = tileLocation(zoom, x, y)
 		val lowerRight = tileLocation(zoom, x + 1, y + 1)
 
@@ -59,44 +60,24 @@ object Interaction {
 		val optimizedValues = temperatures.map(tempAndLocation => {
 			(OptimizedLocation(tempAndLocation._1), tempAndLocation._2)
 		})
-		val pixels = createPixelsOptimized(optimizedValues, colors, pixelsWithLocation)
-		//		mapPixels2Image(pixels)
-		null
+		val colorUtil = new ColorInterpolationUtil(colors.toSeq)
+
+		val pixels = createPixelsOptimized(Observable.fromIterable(optimizedValues), colorUtil,
+			Observable.fromIterable(pixelsWithLocation))
+		mapPixels2Image(pixels)
 	}
 
-	private def createPixels(temperatures: Iterable[(Location, Double)],
-													 colors: Iterable[(Double, Color)],
-													 pixelsWithLocation: Seq[PixelWithLocation]) = {
+	private def createPixelsOptimized(temperatures: Observable[(OptimizedLocation, Double)],
+																		colorUtil: ColorInterpolationUtil,
+																		pixelsWithLocation: Observable[PixelWithLocation]): Seq[PixelWithColour] = {
+		import monix.execution.Scheduler.Implicits.global
 		Profiler.runProfiled("createPixels") {
-			val cache = mutable.HashMap[Double, Color]()
-			//			val xyPar = pixelsWithLocation.par
-			val xyPar = pixelsWithLocation
-			//			xyPar.tasksupport = pixelPool
-			val pixelsWithColor = xyPar.map(pixelWithLocation => {
-				val temperature = Visualization.predictTemperature(temperatures, pixelWithLocation._3)
-				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
-				(pixelWithLocation._1, pixelWithLocation._2, color)
-			}).seq
-			pixelsWithColor
-		}
-	}
-
-	private def createPixelsOptimized(temperatures: Iterable[(OptimizedLocation, Double)],
-																		colors: Iterable[(Double, Color)],
-																		pixelsWithLocation: Seq[PixelWithLocation]) = {
-		???
-		Profiler.runProfiled("createPixels") {
-			val cache = mutable.HashMap[Double, Color]()
-			//			val xyPar = pixelsWithLocation.par
-			val xyPar = pixelsWithLocation
-			//			xyPar.tasksupport = pixelPool
-			//			val pixelsWithColor = xyPar.map(pixelWithLocation => {
-			//				val temperature = VisualizationGeneric.approxTemperature(temperatures.toSeq, pixelWithLocation._3,
-			//					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
-			//				val color = cache.getOrElseUpdate(temperature, interpolateColor(colors, temperature))
-			//				(pixelWithLocation._1, pixelWithLocation._2, color)
-			//			}).seq
-			//			pixelsWithColor
+			val pixelsWithColors: Observable[PixelWithColour] = pixelsWithLocation.mapAsync(5)(pixelWithLocation => {
+				val temperature = VisualizationGeneric.approxTemperature(temperatures, pixelWithLocation._3,
+					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
+				temperature.map(t => (pixelWithLocation._1, pixelWithLocation._2, colorUtil.interpolate(t)))
+			})
+			Await.result(pixelsWithColors.toListL.runAsync, Duration(7, TimeUnit.MINUTES))
 		}
 	}
 
@@ -128,11 +109,7 @@ object Interaction {
 													 zoomLvl: Int = 3
 												 ): Unit = {
 		yearlyData.foreach(data => {
-			???
 			val inputs = generateInputs(zoomLvl, data)
-			//			val parSeq = inputs.par
-			//			parSeq.tasksupport = Main.createFjPool(2)
-			//			parSeq.foreach(input => {
 			inputs.foreach(input => {
 				val year = input._1
 				val zoom = input._2
