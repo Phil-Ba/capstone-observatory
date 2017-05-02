@@ -1,5 +1,9 @@
 package observatory
 
+object models {
+	type OPixel = (Int, Int)
+}
+
 case class Location(lat: Double, lon: Double) {
 	//	lazy val latRadians: Double = lat.toRadians
 	//	lazy val latSinus: Double = math.sin(latRadians)
