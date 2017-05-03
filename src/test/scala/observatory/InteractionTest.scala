@@ -23,13 +23,13 @@ class InteractionTest extends FunSuite with Checkers {
 
 		def imgFunction(year: Int, zoom: Int, x: Int, y: Int, data: Iterable[(Location, Double)]) = {
 			val tileImage = Interaction.tile(data, grads, zoom, x, y)
-			Path(s"target/temperatures/$year/$zoom").createDirectory()
-			tileImage.output(s"target/temperatures/$year/$zoom/$x-$y.png")
+			Path(s"src/generated/resources/temperatures/$year/$zoom").createDirectory()
+			tileImage.output(s"src/generated/resources/temperatures/$year/$zoom/$x-$y.png")
 		}
 
     val data: Seq[(Location, Double)] = TestDataUtil.fetchTestDataForYear(1975)
     val yearlyData = Seq((1975, data))
-    Interaction.generateTiles(yearlyData, imgFunction, 3)
+		Interaction.generateTiles(yearlyData, imgFunction, 1)
 	}
 
 }
