@@ -7,6 +7,7 @@ import monix.reactive.Observable
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{ColorInterpolationUtil, GeoInterpolationUtil, Profiler, SlipperyMap}
 import observatory.viz.VisualizationGeneric
+import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 
 import scala.concurrent.Await
@@ -18,6 +19,8 @@ import scala.concurrent.duration.Duration
 object Interaction {
 
 	Main.loggerConfig
+	private val logger = LoggerFactory.getLogger(this.getClass)
+
 	type PixelWithLocation = (Int, Int, Location)
 	type PixelWithColour = (Int, Int, Color)
 
@@ -29,8 +32,7 @@ object Interaction {
 		*         .org/wiki/Slippy_map_tilenames
 		*/
 	def tileLocation(zoom: Int, x: Int, y: Int): Location = {
-		val latLon = SlipperyMap.Tile(x, y, zoom).toLatLon
-		Location(latLon.lat, latLon.lon)
+		SlipperyMap.Tile(x, y, zoom).toLocation
 	}
 
 	/**
@@ -43,28 +45,30 @@ object Interaction {
 		*/
 	def tile(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)], zoom: Int, x: Int,
 					 y: Int): Image = {
-		val upperLeft = tileLocation(zoom, x, y)
-		val lowerRight = tileLocation(zoom, x + 1, y + 1)
 
-		val startX = upperLeft.lon
-		val startY = upperLeft.lat
-		val stepX = (lowerRight.lon - upperLeft.lon) / 256
-		val stepY = (lowerRight.lat - upperLeft.lat) / 256
+		logger.info(s"tile=> x:$x y:$y z:$zoom temps:$temperatures")
+		val pixelsWithLocation: Seq[(Int, Int, Location)] = generatePixelsWithLocations(zoom, x, y)
+
+		val optimizedTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
+		val colorUtil = new ColorInterpolationUtil(colors.toSeq)
+
+		val pixels = createPixelsOptimized(Observable.fromIterable(optimizedTemperatures), colorUtil,
+			Observable.fromIterable(pixelsWithLocation))
+		mapPixels2Image(pixels)
+	}
+
+	def generatePixelsWithLocations(zoom: Int, tileX: Int, tileY: Int): Seq[(Int, Int, Location)] = {
+		val startX = 256 * tileX
+		val startY = 256 * tileY
 
 		val pixelsWithLocation = for {
 			x <- 0 until 256
 			y <- 0 until 256
 		} yield {
-			(x, y, Location(startY + y * stepY, startX + x * stepX))
+			(x, y, tileLocation(zoom + 8, x, y))
+			//			(x, y, SlipperyMap.Tile(startX + x, startY + y, zoom).toLocation)
 		}
-		val optimizedValues = temperatures.map(tempAndLocation => {
-			(OptimizedLocation(tempAndLocation._1), tempAndLocation._2)
-		})
-		val colorUtil = new ColorInterpolationUtil(colors.toSeq)
-
-		val pixels = createPixelsOptimized(Observable.fromIterable(optimizedValues), colorUtil,
-			Observable.fromIterable(pixelsWithLocation))
-		mapPixels2Image(pixels)
+		pixelsWithLocation
 	}
 
 	private def createPixelsOptimized(temperatures: Observable[(OptimizedLocation, Double)],
@@ -72,7 +76,7 @@ object Interaction {
 																		pixelsWithLocation: Observable[PixelWithLocation]): Seq[PixelWithColour] = {
 		import monix.execution.Scheduler.Implicits.global
 		Profiler.runProfiled("createPixels") {
-			val pixelsWithColors: Observable[PixelWithColour] = pixelsWithLocation.mapAsync(5)(pixelWithLocation => {
+			val pixelsWithColors: Observable[PixelWithColour] = pixelsWithLocation.mapAsync(25)(pixelWithLocation => {
 				val temperature = VisualizationGeneric.approxTemperature(temperatures, pixelWithLocation._3,
 					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
 				temperature.map(t => (pixelWithLocation._1, pixelWithLocation._2, colorUtil.interpolate(t)))
@@ -84,15 +88,13 @@ object Interaction {
 	def mapPixels2Image(pixels: Seq[PixelWithColour]): Image = {
 		val img = Image(256, 256)
 
-		Profiler.runProfiled("imgCreation") {
-			pixels.foreach(
-				pixelWithColor => {
-					val color = pixelWithColor._3
-					img.setPixel(pixelWithColor._1, pixelWithColor._2, Pixel(RGBColor(color.red, color.green, color.blue, 127)))
-				}
-			)
-			img
-		}
+		pixels.foreach(
+			pixelWithColor => {
+				val color = pixelWithColor._3
+				img.setPixel(pixelWithColor._1, pixelWithColor._2, Pixel(RGBColor(color.red, color.green, color.blue, 127)))
+			}
+		)
+		img
 	}
 
 	/**
@@ -123,14 +125,42 @@ object Interaction {
 		})
 	}
 
+	def generateTile[Data](yearlyData: Iterable[(Int, Data)],
+												 generateImage: (Int, Int, Int, Int, Data) => Unit,
+												 zoomLvl: Int
+												): Unit = {
+		yearlyData.foreach(data => {
+			val inputs = generateInputsForZoomLevel(zoomLvl, data)
+			inputs.foreach(input => {
+				val year = input._1
+				val zoom = input._2
+				val x = input._3
+				val y = input._4
+				val data = input._5
+				Profiler.runProfiled(s"generateTile(x:$x,y:$y,z:$zoom)", Level.DEBUG) {
+					generateImage(year, zoom, x, y, data)
+				}
+			})
+		})
+	}
+
 	def generateInputs[Data](zoomLvl: Int, data: (Int, Data)) = {
-		for {
+		val inputs = for {
 			zoom <- 0 to zoomLvl
-			tiles = Math.round(Math.pow(2, 2 * zoom) / Math.pow(2, zoom)).toInt
+		} yield {
+			generateInputsForZoomLevel(zoom, data)
+		}
+		inputs.flatten
+	}
+
+	def generateInputsForZoomLevel[Data](zoom: Int, data: (Int, Data)) = {
+		val tiles = Math.round(Math.pow(2, 2 * zoom) / Math.pow(2, zoom)).toInt
+		val inputs = for {
 			x <- 0 until tiles
 			y <- 0 until tiles
 		} yield {
 			(data._1, zoom, x, y, data._2)
 		}
+		inputs
 	}
 }
