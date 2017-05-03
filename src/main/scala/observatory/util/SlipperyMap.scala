@@ -1,5 +1,7 @@
 package observatory.util
 
+import observatory.Location
+
 import scala.math._
 
 /**
@@ -12,6 +14,10 @@ object SlipperyMap {
 			toDegrees(atan(sinh(Pi * (1.0 - 2.0 * y.toDouble / (1 << z))))),
 			x.toDouble / (1 << z) * 360.0 - 180.0,
 			z)
+
+		def toLocation = Location(
+			toDegrees(atan(sinh(Pi * (1.0 - 2.0 * y.toDouble / (1 << z))))),
+			x.toDouble / (1 << z) * 360.0 - 180.0)
 
 		def toURI = new java.net.URI("http://tile.openstreetmap.org/" + z + "/" + x + "/" + y + ".png")
 	}
