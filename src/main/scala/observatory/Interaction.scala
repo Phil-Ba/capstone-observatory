@@ -64,10 +64,10 @@ object Interaction {
 		val startY = 256 * tileY
 
 		val pixelsWithLocation = for {
-			x <- startX + 0 until startX + 256
-			y <- startY + 0 until startY + 256
+			x <- 0 until 256
+			y <- 0 until 256
 		} yield {
-			(x, y, tileLocation(targetZoom, x, y))
+			(x, y, tileLocation(targetZoom, startX + x, startY + y))
 			//			(x, y, SlipperyMap.Tile(startX + x, startY + y, zoom).toLocation)
 		}
 		pixelsWithLocation
