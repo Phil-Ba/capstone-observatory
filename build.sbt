@@ -15,6 +15,8 @@ scalacOptions ++= Seq(
 	"-Xexperimental"
 )
 
+resolvers += Resolver.mavenLocal
+
 libraryDependencies ++= Seq(
 	"org.scalatest" %% "scalatest" % "3.0.1" % "test",
 	"com.sksamuel.scrimage" %% "scrimage-core" % "2.1.6", // for visualization
