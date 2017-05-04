@@ -19,6 +19,19 @@ class InteractionTest extends FunSuite with Checkers {
 		(-60D, Color(0, 0, 0))
 	)
 
+	test("GenerateTiles from real dataset") {
+
+		def imgFunction(year: Int, zoom: Int, x: Int, y: Int, data: Iterable[(Location, Double)]) = {
+			val tileImage = Interaction.tile(data, grads, zoom, x, y)
+			Path(s"src/generated/resources/temperatures/$year/$zoom").createDirectory()
+			tileImage.output(s"src/generated/resources/temperatures/$year/$zoom/$x-$y.png")
+		}
+
+		val data: Seq[(Location, Double)] = TestDataUtil.fetchTestDataForYear(1975)
+		val yearlyData = Seq((1975, data))
+		Interaction.generateTiles(yearlyData, imgFunction, 3)
+	}
+
 	test("GenerateTile from real dataset") {
 
 		def imgFunction(year: Int, zoom: Int, x: Int, y: Int, data: Iterable[(Location, Double)]) = {
@@ -38,8 +51,6 @@ class InteractionTest extends FunSuite with Checkers {
 		val testLocation = SlipperyMap.LatLonPoint(84.92832092949963, -180.0, 0).toTile
 
 		val tile = Interaction.tile(temperatures, grads, 0, 0, 0)
-
-
 	}
 
 }
