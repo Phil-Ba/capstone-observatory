@@ -58,14 +58,16 @@ object Interaction {
 	}
 
 	def generatePixelsWithLocations(zoom: Int, tileX: Int, tileY: Int): Seq[(Int, Int, Location)] = {
+		val targetZoom = zoom + 8
+		val tiles = Math.round(Math.pow(2, 2 * targetZoom) / Math.pow(2, targetZoom)).toInt
 		val startX = 256 * tileX
 		val startY = 256 * tileY
 
 		val pixelsWithLocation = for {
-			x <- 0 until 256
-			y <- 0 until 256
+			x <- startX + 0 until startX + 256
+			y <- startY + 0 until startY + 256
 		} yield {
-			(x, y, tileLocation(zoom + 8, x, y))
+			(x, y, tileLocation(targetZoom, x, y))
 			//			(x, y, SlipperyMap.Tile(startX + x, startY + y, zoom).toLocation)
 		}
 		pixelsWithLocation
