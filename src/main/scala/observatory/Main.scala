@@ -1,6 +1,7 @@
 package observatory
 
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 
 import scala.collection.parallel.ForkJoinTaskSupport
 
@@ -13,7 +14,7 @@ object Main {
 
 	def createFjPool(size: Int) = new ForkJoinTaskSupport(new scala.concurrent.forkjoin.ForkJoinPool(size))
 
-	lazy val loggerConfig = {
+	val loggerConfig = {
 
 		val console = new ConsoleAppender
 		//create appender
@@ -30,6 +31,11 @@ object Main {
 		Logger.getRootLogger.getLoggerRepository.getLogger("org.apache.spark").setLevel(Level.WARN)
 		Logger.getRootLogger.getLoggerRepository.getLogger("org.spark_project").setLevel(Level.WARN)
 	}
+
+	/* This will return Long.MAX_VALUE if there is no preset limit */
+	private val logger = LoggerFactory.getLogger(this.getClass)
+	logger.info("Max memory(kb):{}", Runtime.getRuntime.maxMemory / 1000)
+	logger.info("Free memory(kb):{}", Runtime.getRuntime.freeMemory / 1000)
 
 	lazy val spark: SparkSession =
 		SparkSession
