@@ -46,7 +46,7 @@ object Interaction {
 	def tile(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)], zoom: Int, x: Int,
 					 y: Int): Image = {
 
-		logger.info(s"tile=> x:$x y:$y z:$zoom temps:$temperatures")
+		logger.debug("tile=> x:{} y:{} z:{} temps:{}", x.toString, y.toString, zoom.toString, temperatures)
 		val pixelsWithLocation: Seq[(Int, Int, Location)] = generatePixelsWithLocations(zoom, x, y)
 
 		val optimizedTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
@@ -77,7 +77,7 @@ object Interaction {
 																		colorUtil: ColorInterpolationUtil,
 																		pixelsWithLocation: Observable[PixelWithLocation]): Seq[PixelWithColour] = {
 		import monix.execution.Scheduler.Implicits.global
-		Profiler.runProfiled("createPixels") {
+		Profiler.runProfiled("createPixels", Level.DEBUG) {
 			val pixelsWithColors: Observable[PixelWithColour] = pixelsWithLocation.mapAsync(25)(pixelWithLocation => {
 				val temperature = VisualizationGeneric.approxTemperature(temperatures, pixelWithLocation._3,
 					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))

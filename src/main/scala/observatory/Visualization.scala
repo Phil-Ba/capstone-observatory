@@ -64,7 +64,7 @@ object Visualization {
 		*/
 	def visualize(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)],
 								scale: Int = 1): Image = {
-		log.info(s"visualize: temperatues: $temperatures")
+		log.debug("visualize: temperatues:{}", temperatures)
 		val xyValues = for {
 			x <- 0 until baseWidth * scale
 			y <- 0 until baseHeight * scale
@@ -80,7 +80,6 @@ object Visualization {
 		)
 		val img = Image(baseWidth * scale, baseHeight * scale)
 
-		Profiler.runProfiled("imgCreation") {
 			xyColors.foreach(
 				xyColor => {
 					val xy = xyColor._1
@@ -89,7 +88,6 @@ object Visualization {
 				}
 			)
 			img
-		}
 	}
 
 }
