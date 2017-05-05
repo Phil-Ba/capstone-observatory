@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import monix.eval.Task
 import monix.reactive.Observable
-import observatory.util.GeoInterpolationUtil
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
+import observatory.util.{GeoInterpolationUtil, Profiler}
 import observatory.viz.VisualizationGeneric
 
 import scala.concurrent.Await
@@ -24,13 +24,16 @@ object Manipulation {
 	def makeGrid(temperatures: Iterable[(Location, Double)]): (Int, Int) => Double = {
 		import monix.execution.Scheduler.Implicits.global
 
+		Profiler.runProfiled("makeGrid") {
+			//			???
 		val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temperatures))
 		val gridFunction = { (lat: Int, lon: Int) =>
 			val tempTask = temperatureAtLocation(obsTemperatures, lat, lon)
 			val result = tempTask.runAsync
 			Await.result(result, Duration(10, TimeUnit.SECONDS))
 		}
-		gridFunction
+			gridFunction
+		}
 	}
 
 	private def temperatureAtLocation(obsTemperatures: Observable[(OptimizedLocation, Double)],
@@ -47,14 +50,18 @@ object Manipulation {
 	def average(temperaturess: Iterable[Iterable[(Location, Double)]]): (Int, Int) => Double = {
 		import monix.execution.Scheduler.Implicits.global
 
-		val avgFunction = { (lat: Int, lon: Int) =>
-			val sum = Observable.fromIterable(temperaturess).mapAsync(25)(temp => {
-				val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temp))
-				temperatureAtLocation(obsTemperatures, lat, lat)
-			}).sumL
-			Await.result(sum.runAsync, Duration(10, TimeUnit.SECONDS)) / temperaturess.size
+		Profiler.runProfiled("average") {
+			//			???
+			val totalSize = temperaturess.size
+			val avgFunction = { (lat: Int, lon: Int) =>
+				val sum = Observable.fromIterable(temperaturess).mapAsync(25)(temp => {
+					val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temp))
+					temperatureAtLocation(obsTemperatures, lat, lat)
+				}).sumL
+				Await.result(sum.runAsync, Duration(10, TimeUnit.SECONDS)) / totalSize
+			}
+			avgFunction
 		}
-		avgFunction
 	}
 
 	/**
@@ -64,8 +71,9 @@ object Manipulation {
 		*/
 	def deviation(temperatures: Iterable[(Location, Double)], normals: (Int, Int) => Double): (Int, Int) => Double = {
 		import monix.execution.Scheduler.Implicits.global
-		???
-		val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temperatures))
+		Profiler.runProfiled("deviation") {
+			//			???
+			val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temperatures))
 		val devFunction = { (lat: Int, lon: Int) =>
 			val currentTempTask = temperatureAtLocation(obsTemperatures, lat, lon)
 			val normalTemp = normals(lat, lon)
@@ -73,6 +81,7 @@ object Manipulation {
 			currentTemp - normalTemp
 		}
 		devFunction
+		}
 	}
 
 
