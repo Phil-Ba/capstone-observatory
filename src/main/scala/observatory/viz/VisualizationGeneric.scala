@@ -70,13 +70,43 @@ object VisualizationGeneric {
 				val invWeight = 1 / pow(distance, p)
 				(temp * invWeight, invWeight)
 			})
-		//		distancesAndTemps.filter(_._1 <= 1.0)
-		//			.minByL(_._1)
 		distancesAndTemps.findL(_._1 <= 1.0)
-			//			.switchIfEmpty()
-			//			.minByL(_._1)
 			.flatMap {
-			case Some(min) => Task.now(min._2)
+				case Some(min) => Task.now(min._2)
+				case None => {
+					val res = distancesAndTemps
+						.map(distanceAndTemp => {
+							val temp = distanceAndTemp._2
+							val invWeight = 1 / pow(distanceAndTemp._1, p)
+							(temp * invWeight, invWeight)
+						})
+
+					val aggregation = res.foldLeftL((0.0, 0.0))((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+						.map(sums => sums._1 / sums._2)
+					aggregation
+				}
+			}
+	}
+
+	def approxTemperature[T](temperatures: Iterable[(T, Double)],
+													 locationToapprox: Location,
+													 distanceFunction: (T, Location) => Double): Double = {
+		val distancesAndTemps = temperatures
+			.map((locAndTemp: (T, Double)) =>
+				(distanceFunction(locAndTemp._1, locationToapprox), locAndTemp._2))
+
+		val res = temperatures
+			.map((locAndTemp: (T, Double)) => {
+				val locationDatapoint = locAndTemp._1
+				val temp = locAndTemp._2
+				val distance = distanceFunction(locationDatapoint, locationToapprox)
+				val invWeight = 1 / pow(distance, p)
+				(temp * invWeight, invWeight)
+			})
+		distancesAndTemps.find(_._1 <= 1.0)
+		match {
+
+			case Some(min) => min._2
 			case None => {
 				val res = distancesAndTemps
 					.map(distanceAndTemp => {
@@ -85,13 +115,10 @@ object VisualizationGeneric {
 						(temp * invWeight, invWeight)
 					})
 
-				val aggregation = res.foldLeftL((0.0, 0.0))((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
-					.map(sums => sums._1 / sums._2)
-				aggregation
-				//				}
-				//			}
+				val aggregation = res.foldLeft((0.0, 0.0))((t1, t2) => (t1._1 + t2._1, t1._2 + t2._2))
+				aggregation._1 / aggregation._2
 			}
-
 		}
 	}
+
 }

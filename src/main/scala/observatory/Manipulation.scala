@@ -1,20 +1,19 @@
 package observatory
 
-import java.util.concurrent.TimeUnit
-
 import monix.eval.Task
 import monix.reactive.Observable
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{GeoInterpolationUtil, Profiler}
 import observatory.viz.VisualizationGeneric
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import org.slf4j.LoggerFactory
 
 /**
 	* 4th milestone: value-added information
 	*/
 object Manipulation {
+
+	Main.loggerConfig
+	private val logger = LoggerFactory.getLogger(this.getClass)
 
 	/**
 		* @param temperatures Known temperatures
@@ -22,16 +21,13 @@ object Manipulation {
 		*         returns the predicted temperature at this location
 		*/
 	def makeGrid(temperatures: Iterable[(Location, Double)]): (Int, Int) => Double = {
-		import monix.execution.Scheduler.Implicits.global
 
 		Profiler.runProfiled("makeGrid") {
 			//			???
-		val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temperatures))
-		val gridFunction = { (lat: Int, lon: Int) =>
-			val tempTask = temperatureAtLocation(obsTemperatures, lat, lon)
-			val result = tempTask.runAsync
-			Await.result(result, Duration(10, TimeUnit.SECONDS))
-		}
+			val optTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
+			val gridFunction = { (lat: Int, lon: Int) =>
+				temperatureAtLocation(optTemperatures, lat, lon)
+			}
 			gridFunction
 		}
 	}
@@ -42,26 +38,32 @@ object Manipulation {
 			GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
 	}
 
+	private def temperatureAtLocation(obsTemperatures: Iterable[(OptimizedLocation, Double)],
+																		lat: Int, lon: Int): Double = {
+		VisualizationGeneric.approxTemperature(obsTemperatures, Location(lat, lon),
+			GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
+	}
+
 	/**
 		* @param temperaturess Sequence of known temperatures over the years (each element of the collection
 		*                      is a collection of pairs of location and temperature)
 		* @return A function that, given a latitude and a longitude, returns the average temperature at this location
 		*/
 	def average(temperaturess: Iterable[Iterable[(Location, Double)]]): (Int, Int) => Double = {
-		import monix.execution.Scheduler.Implicits.global
 
 		Profiler.runProfiled("average") {
+			logger.info("avg123:{}", temperaturess)
 			//			???
-			val totalSize = temperaturess.size
 			val avgFunction = { (lat: Int, lon: Int) =>
-				val sum = Observable.fromIterable(temperaturess).mapAsync(25)(temp => {
-					val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temp))
-					temperatureAtLocation(obsTemperatures, lat, lat)
-				}).sumL
-				Await.result(sum.runAsync, Duration(10, TimeUnit.SECONDS)) / totalSize
+				logger.info("avg123:{}|{}", lat, lon)
+				val sum = temperaturess.map(temp => {
+					temperatureAtLocation(VisualizationGeneric.mapToOptimizedLocations(temp), lat, lat) / temperaturess.size
+				}).sum
+				sum
 			}
 			avgFunction
 		}
+
 	}
 
 	/**
@@ -70,20 +72,17 @@ object Manipulation {
 		* @return A sequence of grids containing the deviations compared to the normal temperatures
 		*/
 	def deviation(temperatures: Iterable[(Location, Double)], normals: (Int, Int) => Double): (Int, Int) => Double = {
-		import monix.execution.Scheduler.Implicits.global
 		Profiler.runProfiled("deviation") {
 			//			???
-			val obsTemperatures = Observable.fromIterable(VisualizationGeneric.mapToOptimizedLocations(temperatures))
-		val devFunction = { (lat: Int, lon: Int) =>
-			val currentTempTask = temperatureAtLocation(obsTemperatures, lat, lon)
-			val normalTemp = normals(lat, lon)
-			val currentTemp = Await.result(currentTempTask.runAsync, Duration(10, TimeUnit.SECONDS))
-			currentTemp - normalTemp
-		}
-		devFunction
+			val optTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
+			val devFunction = { (lat: Int, lon: Int) =>
+				val currentTemp = temperatureAtLocation(optTemperatures, lat, lon)
+				val normalTemp = normals(lat, lon)
+				currentTemp - normalTemp
+			}
+			devFunction
 		}
 	}
-
 
 }
 

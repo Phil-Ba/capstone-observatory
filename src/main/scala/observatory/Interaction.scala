@@ -80,7 +80,7 @@ object Interaction {
 		Profiler.runProfiled("createPixels", Level.DEBUG) {
 			val pixelsWithColors: Observable[PixelWithColour] = pixelsWithLocation.mapAsync(25)(pixelWithLocation => {
 				val temperature = VisualizationGeneric.approxTemperature(temperatures, pixelWithLocation._3,
-					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _))
+					GeoInterpolationUtil.approximateDistance(_: OptimizedLocation, _: Location))
 				temperature.map(t => (pixelWithLocation._1, pixelWithLocation._2, colorUtil.interpolate(t)))
 			})
 			Await.result(pixelsWithColors.toListL.runAsync, Duration(7, TimeUnit.MINUTES))

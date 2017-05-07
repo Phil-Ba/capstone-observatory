@@ -26,7 +26,6 @@ object Visualization {
 	val log = LoggerFactory.getLogger(this.getClass)
 
 
-
 	/**
 		* @param temperatures Known temperaturechs: pairs containing a location and the temperature at this location
 		* @param location     Location where to predict the temperature
@@ -41,7 +40,7 @@ object Visualization {
 				.map(_._2)
 				.getOrElse({
 					val temperature = VisualizationGeneric.approxTemperature(tempObserv, location,
-						GeoInterpolationUtil.approximateDistance(_: Location, _))
+						GeoInterpolationUtil.approximateDistance(_: Location, _: Location))
 					Await.result(temperature.runAsync, Duration(7, TimeUnit.MINUTES))
 				})
 			result
@@ -80,14 +79,14 @@ object Visualization {
 		)
 		val img = Image(baseWidth * scale, baseHeight * scale)
 
-			xyColors.foreach(
-				xyColor => {
-					val xy = xyColor._1
-					val color = xyColor._2
-					img.setPixel(xy._1, xy._2, Pixel(RGBColor(color.red, color.green, color.blue)))
-				}
-			)
-			img
+		xyColors.foreach(
+			xyColor => {
+				val xy = xyColor._1
+				val color = xyColor._2
+				img.setPixel(xy._1, xy._2, Pixel(RGBColor(color.red, color.green, color.blue)))
+			}
+		)
+		img
 	}
 
 }
