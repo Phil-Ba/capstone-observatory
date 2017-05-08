@@ -50,16 +50,14 @@ object Manipulation {
 		* @return A function that, given a latitude and a longitude, returns the average temperature at this location
 		*/
 	def average(temperaturess: Iterable[Iterable[(Location, Double)]]): (Int, Int) => Double = {
-
 		Profiler.runProfiled("average") {
-			logger.info("avg123:{}", temperaturess)
+			val optTemperaturess = temperaturess.map(VisualizationGeneric.mapToOptimizedLocations)
 			//			???
 			val avgFunction = { (lat: Int, lon: Int) =>
-				logger.info("avg123:{}|{}", lat, lon)
-				val sum = temperaturess.map(temp => {
-					temperatureAtLocation(VisualizationGeneric.mapToOptimizedLocations(temp), lat, lat) / temperaturess.size
+				val yearlyTemps = optTemperaturess.map(temp => {
+					temperatureAtLocation(temp, lat, lon)
 				}).sum
-				sum
+				yearlyTemps / temperaturess.size
 			}
 			avgFunction
 		}
