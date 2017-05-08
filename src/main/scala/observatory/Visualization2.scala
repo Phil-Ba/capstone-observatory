@@ -1,6 +1,7 @@
 package observatory
 
-import com.sksamuel.scrimage.Image
+import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
+import observatory.util.ColorInterpolationUtil
 
 /**
 	* 5th milestone: value-added information visualization
@@ -25,7 +26,10 @@ object Visualization2 {
 														 d10: Double,
 														 d11: Double
 													 ): Double = {
-		???
+		d00 * (1 - x) * (1 - y) +
+			d10 * x * (1 - y) +
+			d01 * (1 - x) * y +
+			d11 * x * y
 	}
 
 	/**
@@ -43,7 +47,20 @@ object Visualization2 {
 										 x: Int,
 										 y: Int
 									 ): Image = {
-		???
+		val pixelsWithLocation: Seq[(Int, Int, Location)] = Interaction.generatePixelsWithLocations(zoom, x, y)
+		val colorUtil = new ColorInterpolationUtil(colors.toSeq)
+		val img = Image(256, 256)
+
+		pixelsWithLocation.foreach(
+			pixelsWithLocation => {
+				val location = pixelsWithLocation._3
+				val temp = grid(location.lat.toInt, location.lon.toInt)
+				val color = colorUtil.interpolate(temp)
+				img.setPixel(pixelsWithLocation._1, pixelsWithLocation._2,
+					Pixel(RGBColor(color.red, color.green, color.blue, 127)))
+			}
+		)
+		img
 	}
 
 }
