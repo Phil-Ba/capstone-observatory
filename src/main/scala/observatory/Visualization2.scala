@@ -2,11 +2,15 @@ package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
 import observatory.util.ColorInterpolationUtil
+import org.slf4j.LoggerFactory
 
 /**
 	* 5th milestone: value-added information visualization
 	*/
 object Visualization2 {
+
+	Main.loggerConfig
+	private val logger = LoggerFactory.getLogger(this.getClass)
 
 	/**
 		* @param x   X coordinate between 0 and 1
@@ -47,17 +51,23 @@ object Visualization2 {
 										 x: Int,
 										 y: Int
 									 ): Image = {
+
 		val pixelsWithLocation: Seq[(Int, Int, Location)] = Interaction.generatePixelsWithLocations(zoom, x, y)
 		val colorUtil = new ColorInterpolationUtil(colors.toSeq)
 		val img = Image(256, 256)
-
 		pixelsWithLocation.foreach(
 			pixelsWithLocation => {
 				val location = pixelsWithLocation._3
-				val temp = grid(location.lat.toInt, location.lon.toInt)
+				val yFloor = math.floor(location.lat).toInt
+				val xFloor = math.floor(location.lon).toInt
+				val d00 = grid(yFloor, xFloor)
+				val d01 = grid(yFloor + 1, xFloor)
+				val d10 = grid(yFloor, xFloor + 1)
+				val d11 = grid(yFloor + 1, xFloor + 1)
+				val temp = bilinearInterpolation(location.lon - xFloor, location.lat - yFloor, d00, d01, d10, d11)
 				val color = colorUtil.interpolate(temp)
 				img.setPixel(pixelsWithLocation._1, pixelsWithLocation._2,
-					Pixel(RGBColor(color.red, color.green, color.blue, 127)))
+					Pixel(RGBColor(color.red, color.green, color.blue)))
 			}
 		)
 		img
