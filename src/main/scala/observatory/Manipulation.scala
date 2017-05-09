@@ -6,6 +6,7 @@ import observatory.util.GeoInterpolationUtil.OptimizedLocation
 import observatory.util.{GeoInterpolationUtil, Profiler}
 import observatory.viz.VisualizationGeneric
 import org.slf4j.LoggerFactory
+import org.slf4j.event.Level
 
 /**
 	* 4th milestone: value-added information
@@ -22,7 +23,7 @@ object Manipulation {
 		*/
 	def makeGrid(temperatures: Iterable[(Location, Double)]): (Int, Int) => Double = {
 
-		Profiler.runProfiled("makeGrid") {
+		Profiler.runProfiled("makeGrid", Level.DEBUG) {
 			//			???
 			val optTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
 			val gridFunction = { (lat: Int, lon: Int) =>
@@ -50,7 +51,7 @@ object Manipulation {
 		* @return A function that, given a latitude and a longitude, returns the average temperature at this location
 		*/
 	def average(temperaturess: Iterable[Iterable[(Location, Double)]]): (Int, Int) => Double = {
-		Profiler.runProfiled("average") {
+		Profiler.runProfiled("average", Level.DEBUG) {
 			val optTemperaturess = temperaturess.map(VisualizationGeneric.mapToOptimizedLocations)
 			//			???
 			val avgFunction = { (lat: Int, lon: Int) =>
@@ -70,7 +71,7 @@ object Manipulation {
 		* @return A sequence of grids containing the deviations compared to the normal temperatures
 		*/
 	def deviation(temperatures: Iterable[(Location, Double)], normals: (Int, Int) => Double): (Int, Int) => Double = {
-		Profiler.runProfiled("deviation") {
+		Profiler.runProfiled("deviation", Level.DEBUG) {
 			//			???
 			val optTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
 			val devFunction = { (lat: Int, lon: Int) =>
