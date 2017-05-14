@@ -26,7 +26,7 @@ object TestDataUtil {
     val serFileLocation = s"src/test/resources/$year.ser"
     val serFile = Path(serFileLocation)
     if (serFile.exists == false) {
-      createTestDataSerialized(1975)
+			createTestDataSerialized(year)
     }
 
     val fis = new FileInputStream(serFile.jfile)
