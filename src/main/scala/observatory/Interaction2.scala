@@ -1,15 +1,19 @@
 package observatory
 
+import observatory.LayerName.Temperatures
+
 /**
 	* 6th (and last) milestone: user interface polishing
 	*/
 object Interaction2 {
 
+	private val supportedYears = 1975 to 1975
+
 	/**
 		* @return The available layers of the application
 		*/
 	def availableLayers: Seq[Layer] = {
-		???
+		Seq(Layer(Temperatures, Main.grads, supportedYears), Layer(Temperatures, Main.grads, supportedYears))
 	}
 
 	/**
@@ -17,7 +21,7 @@ object Interaction2 {
 		* @return A signal containing the year bounds corresponding to the selected layer
 		*/
 	def yearBounds(selectedLayer: Signal[Layer]): Signal[Range] = {
-		???
+		Signal(supportedYears)
 	}
 
 	/**
@@ -29,7 +33,15 @@ object Interaction2 {
 		*         in the `selectedLayer` bounds.
 		*/
 	def yearSelection(selectedLayer: Signal[Layer], sliderValue: Signal[Int]): Signal[Int] = {
-		???
+		Signal {
+			val bounds = selectedLayer().bounds
+			val value = sliderValue()
+			value match {
+				case found if bounds.contains(value) => found
+				case _ if bounds.head > value => bounds.head
+				case _ => bounds.last
+			}
+		}
 	}
 
 	/**
@@ -38,7 +50,11 @@ object Interaction2 {
 		* @return The URL pattern to retrieve tiles
 		*/
 	def layerUrlPattern(selectedLayer: Signal[Layer], selectedYear: Signal[Int]): Signal[String] = {
-		???
+		Signal {
+			val name = selectedLayer().layerName.id
+			val year = yearSelection(selectedLayer, selectedYear)()
+			s"src/generated/resources/$name/$year"
+		}
 	}
 
 	/**
@@ -47,7 +63,11 @@ object Interaction2 {
 		* @return The caption to show
 		*/
 	def caption(selectedLayer: Signal[Layer], selectedYear: Signal[Int]): Signal[String] = {
-		???
+		Signal {
+			val name = selectedLayer().layerName.id
+			val year = yearSelection(selectedLayer, selectedYear)()
+			s"$name($year)"
+		}
 	}
 
 }
