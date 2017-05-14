@@ -24,7 +24,6 @@ object Manipulation {
 	def makeGrid(temperatures: Iterable[(Location, Double)]): (Int, Int) => Double = {
 
 		Profiler.runProfiled("makeGrid", Level.DEBUG) {
-			//			???
 			val optTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
 			val gridFunction = { (lat: Int, lon: Int) =>
 				temperatureAtLocation(optTemperatures, lat, lon)
@@ -53,7 +52,6 @@ object Manipulation {
 	def average(temperaturess: Iterable[Iterable[(Location, Double)]]): (Int, Int) => Double = {
 		Profiler.runProfiled("average", Level.DEBUG) {
 			val optTemperaturess = temperaturess.map(VisualizationGeneric.mapToOptimizedLocations)
-			//			???
 			val avgFunction = { (lat: Int, lon: Int) =>
 				val yearlyTemps = optTemperaturess.map(temp => {
 					temperatureAtLocation(temp, lat, lon)
@@ -72,7 +70,6 @@ object Manipulation {
 		*/
 	def deviation(temperatures: Iterable[(Location, Double)], normals: (Int, Int) => Double): (Int, Int) => Double = {
 		Profiler.runProfiled("deviation", Level.DEBUG) {
-			//			???
 			val optTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
 			val devFunction = { (lat: Int, lon: Int) =>
 				val currentTemp = temperatureAtLocation(optTemperatures, lat, lon)
