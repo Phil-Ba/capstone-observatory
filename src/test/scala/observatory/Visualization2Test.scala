@@ -23,7 +23,7 @@ class Visualization2Test extends FunSuite with Checkers {
 
     val averageGrid = Manipulation.average(normals)
 
-    for (yearToVisualize <- 1975 to 2000) {
+    for (yearToVisualize <- 1975 to 2015) {
       val dataForYear = TestDataUtil.fetchTestDataForYear(yearToVisualize)
       val deviationGrid = Manipulation.deviation(dataForYear, averageGrid)
 
