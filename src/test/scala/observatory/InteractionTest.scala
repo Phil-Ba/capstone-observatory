@@ -1,6 +1,6 @@
 package observatory
 
-import observatory.util.TestDataUtil
+import observatory.util.{Profiler, TestDataUtil}
 import org.scalatest.FunSuite
 import org.scalatest.prop.Checkers
 
@@ -13,16 +13,20 @@ class InteractionTest extends FunSuite with Checkers {
     def imgFunction(year: Int, zoom: Int, x: Int, y: Int, data: Iterable[(Location, Double)]) = {
       val image = s"src/generated/resources/temperatures/$year/$zoom/$x-$y.png"
       if (!Path(image).exists) {
-        val tileImage = Interaction.tile(data, Main.grads, zoom, x, y)
-        Path(s"src/generated/resources/temperatures/$year/$zoom").createDirectory()
-        tileImage.output(image)
+        Profiler.runProfiled(s"Generating image tile for $zoom | ($x,$y)") {
+          val tileImage = Interaction.tile(data, Main.grads, zoom, x, y)
+          Path(s"src/generated/resources/temperatures/$year/$zoom").createDirectory()
+          tileImage.output(image)
+        }
       }
     }
 
     for (yearToVisualize <- 1975 to 2015) {
       val dataForYear = TestDataUtil.fetchTestDataForYear(yearToVisualize)
       val yearlyData = Seq((yearToVisualize, dataForYear))
-      Interaction.generateTiles(yearlyData, imgFunction, 3)
+      Profiler.runProfiled(s"Generating image tile for $yearToVisualize") {
+        Interaction.generateTiles(yearlyData, imgFunction, 3)
+      }
     }
 
   }

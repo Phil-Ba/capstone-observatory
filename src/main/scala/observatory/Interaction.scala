@@ -46,7 +46,6 @@ object Interaction {
 	def tile(temperatures: Iterable[(Location, Double)], colors: Iterable[(Double, Color)], zoom: Int, x: Int,
 					 y: Int): Image = {
 
-		logger.debug("tile=> x:{} y:{} z:{} temps:{}", x.toString, y.toString, zoom.toString, temperatures)
 		val pixelsWithLocation: Seq[(Int, Int, Location)] = generatePixelsWithLocations(zoom, x, y)
 
 		val optimizedTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
