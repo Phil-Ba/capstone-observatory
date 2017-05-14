@@ -1,8 +1,15 @@
 package observatory
 
+import java.util.concurrent.TimeUnit
+
 import com.sksamuel.scrimage.{Image, Pixel, RGBColor}
+import monix.eval.Task
+import monix.reactive.Observable
 import observatory.util.ColorInterpolationUtil
 import org.slf4j.LoggerFactory
+
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 /**
 	* 5th milestone: value-added information visualization
@@ -51,26 +58,81 @@ object Visualization2 {
 										 x: Int,
 										 y: Int
 									 ): Image = {
-
 		val pixelsWithLocation: Seq[(Int, Int, Location)] = Interaction.generatePixelsWithLocations(zoom, x, y)
 		val colorUtil = new ColorInterpolationUtil(colors.toSeq)
 		val img = Image(256, 256)
 		pixelsWithLocation.foreach(
 			pixelsWithLocation => {
-				val location = pixelsWithLocation._3
-				val yFloor = math.floor(location.lat).toInt
-				val xFloor = math.floor(location.lon).toInt
-				val d00 = grid(yFloor, xFloor)
-				val d01 = grid(yFloor + 1, xFloor)
-				val d10 = grid(yFloor, xFloor + 1)
-				val d11 = grid(yFloor + 1, xFloor + 1)
-				val temp = bilinearInterpolation(location.lon - xFloor, location.lat - yFloor, d00, d01, d10, d11)
+				val temp = tempForPixel(grid, pixelsWithLocation)
 				val color = colorUtil.interpolate(temp)
 				img.setPixel(pixelsWithLocation._1, pixelsWithLocation._2,
 					Pixel(RGBColor(color.red, color.green, color.blue)))
 			}
 		)
 		img
+	}
+
+	def visualizeGridMonix(
+													grid: (Int, Int) => Double,
+													colors: Iterable[(Double, Color)],
+													zoom: Int,
+													x: Int,
+													y: Int
+												): Image = {
+		import monix.execution.Scheduler.Implicits.global
+
+		val pixelsWithLocation: Observable[(Int, Int, Location)] = Observable
+			.fromIterable(Interaction.generatePixelsWithLocations(zoom, x, y))
+		val colorUtil = new ColorInterpolationUtil(colors.toSeq)
+		val img = Image(256, 256)
+
+		val total = 256 * 256
+		val step = total / 20
+
+		var count = 0
+		val async = pixelsWithLocation.mapAsync(50) {
+			pixelsWithLocation =>
+				Task {
+					val temp = tempForPixel(grid, pixelsWithLocation)
+					val color = colorUtil.interpolate(temp)
+					img.setPixel(pixelsWithLocation._1, pixelsWithLocation._2, Pixel(RGBColor(color.red, color.green, color
+						.blue)))
+					1
+				}
+		}.bufferSliding(step, step)
+			.foreachL(_ => {
+				count += 1
+				logger.info("{}% of visualizeGridMonix for {} | ({},{}) done.", (count * 5).asInstanceOf[java.lang.Integer],
+					zoom.asInstanceOf[java.lang.Integer], x.asInstanceOf[java.lang.Integer], y.asInstanceOf[java.lang.Integer])
+			}
+			)
+
+		//			.foreachL((i: Int) => {
+		//			count += 1
+		//			if (count % step == 0) {
+		//				logger.info("{}% of visualizeGridMonix for {} | ({},{}) done.", (count / step).asInstanceOf[java.lang
+		// .Integer],
+		//					zoom.asInstanceOf[java.lang.Integer], x.asInstanceOf[java.lang.Integer], y.asInstanceOf[java.lang
+		// .Integer])
+		//			}
+		//		})
+
+		Await.ready(async.runAsync, Duration(20, TimeUnit.DAYS))
+
+		img
+	}
+
+	private def tempForPixel(grid: (Int, Int) => Double,
+													 pixelsWithLocation: (Int, Int, Location)
+													): Double = {
+		val location = pixelsWithLocation._3
+		val yFloor = math.floor(location.lat).toInt
+		val xFloor = math.floor(location.lon).toInt
+		val d00 = grid(yFloor, xFloor)
+		val d01 = grid(yFloor + 1, xFloor)
+		val d10 = grid(yFloor, xFloor + 1)
+		val d11 = grid(yFloor + 1, xFloor + 1)
+		bilinearInterpolation(location.lon - xFloor, location.lat - yFloor, d00, d01, d10, d11)
 	}
 
 }
