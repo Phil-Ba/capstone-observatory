@@ -90,7 +90,7 @@ object Visualization2 {
 		val step = total / 20
 
 		var count = 0
-		val async = pixelsWithLocation.mapAsync(50) {
+		val async = pixelsWithLocation.mapAsync(25) {
 			pixelsWithLocation =>
 				Task {
 					val temp = tempForPixel(grid, pixelsWithLocation)
