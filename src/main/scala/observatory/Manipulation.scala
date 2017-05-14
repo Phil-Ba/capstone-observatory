@@ -1,5 +1,6 @@
 package observatory
 
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import monix.eval.Task
 import monix.reactive.Observable
 import observatory.util.GeoInterpolationUtil.OptimizedLocation
@@ -51,6 +52,7 @@ object Manipulation {
 		*/
 	def average(temperaturess: Iterable[Iterable[(Location, Double)]]): (Int, Int) => Double = {
 		Profiler.runProfiled("average", Level.DEBUG) {
+
 			val optTemperaturess = temperaturess.map(VisualizationGeneric.mapToOptimizedLocations)
 			val avgFunction = { (lat: Int, lon: Int) =>
 				val yearlyTemps = optTemperaturess.map(temp => {
@@ -58,7 +60,13 @@ object Manipulation {
 				}).sum
 				yearlyTemps / temperaturess.size
 			}
-			avgFunction
+
+			val cache = CacheBuilder.newBuilder()
+				.build[(Int, Int), java.lang.Double](new CacheLoader[(Int, Int), java.lang.Double] {
+				override def load(latLon: (Int, Int)): java.lang.Double = avgFunction(latLon._1, latLon._2)
+			})
+
+			(lat: Int, lon: Int) => cache.get((lat, lon))
 		}
 
 	}
@@ -76,6 +84,13 @@ object Manipulation {
 				val normalTemp = normals(lat, lon)
 				currentTemp - normalTemp
 			}
+			//			val cache = CacheBuilder.newBuilder()
+			//				.softValues()
+			//				.build[(Int, Int), Some[Double]](new CacheLoader[(Int, Int), Some[Double]] {
+			//				override def load(latLon: (Int, Int)): Some[Double] = Some(devFunction(latLon._1, latLon._2))
+			//			})
+			//
+			//			(lat: Int, lon: Int) => cache.get((lat, lon)).get
 			devFunction
 		}
 	}

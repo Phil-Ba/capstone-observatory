@@ -1,8 +1,6 @@
 package observatory.util
 
-import java.util
-import java.util.Collections
-
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import observatory.Color
 import observatory.util.ColorInterpolationUtil.RgbPoint
 
@@ -11,13 +9,15 @@ import observatory.util.ColorInterpolationUtil.RgbPoint
 	*/
 class ColorInterpolationUtil(datapointsInput: Seq[(Double, Color)]) {
 
-	private val cache = Collections.synchronizedMap(new util.WeakHashMap[Double, Color](1000))
+	private val cache = CacheBuilder.newBuilder()
+		.maximumSize(1000000)
+		.build[java.lang.Double, Color](new CacheLoader[java.lang.Double, Color] {
+		override def load(key: java.lang.Double): Color = calculateColor(key)
+	})
 
 	private val datapoints = datapointsInput.sortBy(_._1)
 
-	def interpolate(temperature: Double): Color = {
-		cache.computeIfAbsent(temperature, temperatureVal => calculateColor(temperatureVal))
-	}
+	def interpolate(temperature: Double): Color = cache.get(temperature)
 
 	private def calculateColor(temperature: Double) = {
 		val startingPoints = findStartingPoints(temperature)
