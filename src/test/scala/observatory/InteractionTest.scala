@@ -21,7 +21,7 @@ class InteractionTest extends FunSuite with Checkers {
       }
     }
 
-    for (yearToVisualize <- 1975 to 2015) {
+    for (yearToVisualize <- 1975 to 2000) {
       val dataForYear = TestDataUtil.fetchTestDataForYear(yearToVisualize)
       val yearlyData = Seq((yearToVisualize, dataForYear))
       Profiler.runProfiled(s"Generating image tile for $yearToVisualize") {
