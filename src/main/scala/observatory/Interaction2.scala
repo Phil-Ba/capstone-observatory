@@ -1,19 +1,39 @@
 package observatory
 
-import observatory.LayerName.Temperatures
+import observatory.LayerName.{Deviations, Temperatures}
 
 /**
 	* 6th (and last) milestone: user interface polishing
 	*/
 object Interaction2 {
 
-	private val supportedYears = 1975 to 1975
+	private val supportedYears = 1975 to 2015
+
+	val grads = Seq(
+		(60D, Color(255, 255, 255)),
+		(32D, Color(255, 0, 0)),
+		(12D, Color(255, 255, 0)),
+		(0D, Color(0, 255, 255)),
+		(-15D, Color(0, 0, 255)),
+		(-27D, Color(255, 0, 255)),
+		(-50D, Color(33, 0, 107)),
+		(-60D, Color(0, 0, 0))
+	)
+
+	val gradsDeviation = Seq(
+		(7D, Color(0, 0, 0)),
+		(4D, Color(255, 0, 0)),
+		(2D, Color(255, 255, 0)),
+		(0D, Color(255, 255, 255)),
+		(-2D, Color(0, 255, 255)),
+		(-7D, Color(0, 0, 255))
+	)
 
 	/**
 		* @return The available layers of the application
 		*/
 	def availableLayers: Seq[Layer] = {
-		Seq(Layer(Temperatures, Main.grads, supportedYears), Layer(Temperatures, Main.grads, supportedYears))
+		Seq(Layer(Temperatures, grads, supportedYears), Layer(Deviations, gradsDeviation, supportedYears))
 	}
 
 	/**
@@ -21,7 +41,7 @@ object Interaction2 {
 		* @return A signal containing the year bounds corresponding to the selected layer
 		*/
 	def yearBounds(selectedLayer: Signal[Layer]): Signal[Range] = {
-		Signal(supportedYears)
+		Signal(selectedLayer().bounds)
 	}
 
 	/**
@@ -53,7 +73,7 @@ object Interaction2 {
 		Signal {
 			val name = selectedLayer().layerName.id
 			val year = yearSelection(selectedLayer, selectedYear)()
-			s"src/generated/resources/$name/$year"
+			s"src/generated/resources/$name/$year/{z}/{x}-{y}.png"
 		}
 	}
 
