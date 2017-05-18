@@ -2,6 +2,7 @@ package observatory.util
 
 import java.lang.Math.pow
 
+import com.google.common.cache.{CacheBuilder, CacheLoader}
 import observatory.Location
 
 import scala.math._
@@ -31,7 +32,17 @@ object GeoInterpolationUtil {
 		R * c
 	}
 
+	val cache = CacheBuilder.newBuilder()
+		.build[(OptimizedLocation, Location), java.lang.Double](new CacheLoader[(OptimizedLocation, Location), java.lang.Double] {
+		override def load(locs: (OptimizedLocation, Location)): java.lang.Double = approximateDistanceUncached(locs._1, locs._2)
+	})
+
+
 	def approximateDistance(location1: OptimizedLocation, location2: Location): Double = {
+		cache.get((location1, location2))
+	}
+
+	private def approximateDistanceUncached(location1: OptimizedLocation, location2: Location): Double = {
 		val lat2Rad = location2.lat.toRadians
 		val dLat = location1.latRad - lat2Rad
 		val dLon = location1.lonRad - location2.lon.toRadians
