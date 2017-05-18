@@ -21,7 +21,7 @@ class InteractionTest extends FunSuite with Checkers {
       }
     }
 
-    for (yearToVisualize <- 1975 to 2000) {
+    for (yearToVisualize <- 1975 to 2015) {
       val dataForYear = TestDataUtil.fetchTestDataForYear(yearToVisualize)
       val yearlyData = Seq((yearToVisualize, dataForYear))
       Profiler.runProfiled(s"Generating image tile for $yearToVisualize") {
@@ -34,14 +34,14 @@ class InteractionTest extends FunSuite with Checkers {
   test("GenerateTile from real dataset") {
 
     def imgFunction(year: Int, zoom: Int, x: Int, y: Int, data: Iterable[(Location, Double)]) = {
-      val tileImage = Interaction.tile(data, Main.grads, zoom, x, y)
-      Path(s"src/generated/resources/temperatures/$year/$zoom").createDirectory()
-      tileImage.output(s"src/generated/resources/temperatures/$year/$zoom/$x-$y.png")
+      Profiler.runProfiled(s"year($year) $zoom | $x:$y") {
+        val tileImage = Interaction.tile(data, Main.grads, zoom, x, y)
+      }
     }
 
     val data: Seq[(Location, Double)] = TestDataUtil.fetchTestDataForYear(1975)
     val yearlyData = Seq((1975, data))
-    Interaction.generateTile(yearlyData, imgFunction, 1)
+    Interaction.generateTile(yearlyData, imgFunction, 2)
   }
 
 }
