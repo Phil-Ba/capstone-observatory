@@ -66,7 +66,7 @@ object Visualization2 {
 				val temp = tempForPixel(grid, pixelsWithLocation)
 				val color = colorUtil.interpolate(temp)
 				img.setPixel(pixelsWithLocation._1, pixelsWithLocation._2,
-					Pixel(RGBColor(color.red, color.green, color.blue)))
+					Pixel(RGBColor(color.red, color.green, color.blue, 128)))
 			}
 		)
 		img
@@ -96,7 +96,7 @@ object Visualization2 {
 					val temp = tempForPixel(grid, pixelsWithLocation)
 					val color = colorUtil.interpolate(temp)
 					img.setPixel(pixelsWithLocation._1, pixelsWithLocation._2, Pixel(RGBColor(color.red, color.green, color
-						.blue)))
+						.blue, 128)))
 					1
 				}
 		}.bufferSliding(step, step)
