@@ -1,0 +1,1 @@
+for /r /d %%a in (*) do mogrify -matte -channel A -evaluate set 50%%  +channel %%a\*.png
