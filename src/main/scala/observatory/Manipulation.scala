@@ -79,18 +79,17 @@ object Manipulation {
 	def deviation(temperatures: Iterable[(Location, Double)], normals: (Int, Int) => Double): (Int, Int) => Double = {
 		Profiler.runProfiled("deviation", Level.DEBUG) {
 			val optTemperatures = VisualizationGeneric.mapToOptimizedLocations(temperatures)
+			val cache = CacheBuilder.newBuilder()
+				.build[(Int, Int), java.lang.Double](new CacheLoader[(Int, Int), java.lang.Double] {
+				override def load(latLon: (Int, Int)): java.lang.Double = temperatureAtLocation(optTemperatures, latLon._1, latLon._2)
+			})
+
 			val devFunction = { (lat: Int, lon: Int) =>
-				val currentTemp = temperatureAtLocation(optTemperatures, lat, lon)
+				val currentTemp = cache.get((lat, lon))
+				//				val currentTemp = temperatureAtLocation(optTemperatures, lat, lon)
 				val normalTemp = normals(lat, lon)
 				currentTemp - normalTemp
 			}
-			//			val cache = CacheBuilder.newBuilder()
-			//				.softValues()
-			//				.build[(Int, Int), Some[Double]](new CacheLoader[(Int, Int), Some[Double]] {
-			//				override def load(latLon: (Int, Int)): Some[Double] = Some(devFunction(latLon._1, latLon._2))
-			//			})
-			//
-			//			(lat: Int, lon: Int) => cache.get((lat, lon)).get
 			devFunction
 		}
 	}
